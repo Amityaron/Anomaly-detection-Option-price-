@@ -24,7 +24,7 @@ symbol = widgetuser_input
 spy = yf.download(symbol, start=start_date, end=end_date)
 
 # Define Bollinger Band parameters
-n = 30  # number of periods for moving average
+n = 22  # number of periods for moving average
 l = 2   # number of standard deviations for lower band
 u = 2   # number of standard deviations for upper band
 
@@ -37,7 +37,9 @@ spy['Upper'] = spy['SMA'] + u * spy['STD']
 spy['Lower'] = spy['SMA'] - l * spy['STD']
 
 # Drop rows with NaN values from rolling calculations
-spy.dropna(inplace=True)
+spy['Close'], spy['Lower'] = spy['Close'].align(spy['Lower'], axis=0)
+spy['Close'], spy['Upper'] = spy['Close'].align(spy['Upper'], axis=0)
+spy.dropna(subset=['Close', 'Lower', 'Upper'], inplace=True)
 
 # Generate buy signals when the Close price crosses below the lower band
 spy['Signal'] = 0
