@@ -71,8 +71,8 @@ for etf in etfs:
     kurtosis_last_month = kurtosis(data) 
     print(skewness_last_month)
     print(kurtosis_last_month)
-    skewness_list.append(round(skewness_last_month, 2))
-    kurtosis_list.append(round(kurtosis_last_month, 2))
+    skewness_list.append(skewness_last_month)
+    kurtosis_list.append(kurtosis_last_month)
 
     # Get the most recent data point (current price)
     current_price = data.iloc[-1]
