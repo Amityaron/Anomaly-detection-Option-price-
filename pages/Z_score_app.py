@@ -62,16 +62,18 @@ for etf in etfs:
     mean_last_month = data.mean()
     std_last_month = data.std()
 
-    # Calculate skewness and kurtosis, handling any potential issues
+    # Calculate skewness and kurtosis, checking for NaN values
     skewness_last_month = skew(data) if len(data) > 1 else 0  # Avoid skew calculation on single-value series
     kurtosis_last_month = kurtosis(data) if len(data) > 1 else 0  # Avoid kurtosis on single-value series
-    skewness_list.append(round(skewness_last_month, 2))
-    kurtosis_list.append(round(kurtosis_last_month, 2))
+    skewness_last_month = round(skewness_last_month, 2) if not np.isnan(skewness_last_month) else 0
+    kurtosis_last_month = round(kurtosis_last_month, 2) if not np.isnan(kurtosis_last_month) else 0
+    skewness_list.append(skewness_last_month)
+    kurtosis_list.append(kurtosis_last_month)
 
     # Get the most recent data point and calculate Z-score
     current_price = data.iloc[-1]
     current_price_list.append(round(current_price, 2))
-    z_score_current_price = round((current_price - mean_last_month) / std_last_month, 2)
+    z_score_current_price = round((current_price - mean_last_month) / std_last_month, 2) if std_last_month != 0 else 0
     z_score_list.append(z_score_current_price)
 
 # Create a DataFrame to display results
