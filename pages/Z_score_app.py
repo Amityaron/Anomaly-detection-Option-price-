@@ -50,7 +50,7 @@ for etf in etfs:
     # Calculate Z-score, skewness, and kurtosis
     mean = data.mean()
     std = data.std()
-
+    st.write(std)
     # Calculate Z-score only if std is not NaN or 0, else set Z-score to 0
     last_price = data.iloc[-1]
     if pd.notna(std) and std != 0:
