@@ -1,71 +1,94 @@
-# Import required libraries
+# Import necessary libraries
 import pandas as pd
 import numpy as np
-import streamlit as st
+import datetime
+import matplotlib.pyplot as plt
 import yfinance as yf
 from scipy.stats import skew, kurtosis
+import streamlit as st
 
-# Set the app title and other headers
-st.title('Anomaly Detection App')
-st.subheader('Z-Score-Based Anomaly Detection')
-st.write('This app detects anomalies based on Z Score calculations for ETFs.')
-st.image("pages/skewness.png")
+# Set the app title 
+st.title('Welcome to my Anomaly Detection App')
+st.title('Based on Z-Score') 
 
-# Skewness interpretation
+
+# Skewness Explanation
 st.markdown("""
-    - **Highly positively skewed**: Skewness > 1
-    - **Moderately positively skewed**: 0.5 < Skewness ≤ 1
-    - **Approximately symmetric**: -0.5 ≤ Skewness ≤ 0.5
-    - **Moderately negatively skewed**: -1 ≤ Skewness < -0.5
-    - **Highly negatively skewed**: Skewness < -1        
+    ### Skewness Definitions:
+    - Highly positively skewed: Skewness > 1
+    - Moderately positively skewed: 0.5 < Skewness ≤ 1
+    - Approximately symmetric: -0.5 ≤ Skewness ≤ 0.5
+    - Moderately negatively skewed: -1 ≤ Skewness < -0.5
+    - Highly negatively skewed: Skewness < -1
 """)
 
 # Default ETF tickers
-etfs = ["QQQ", "XLK", "XLF", "SOXX", "URTH"]
+default_etfs = ["QQQ","SPY","XLK","SOXX","XLF"]
 
-# Sidebar ticker management
-st.sidebar.header("Manage Tickers")
-new_ticker = st.sidebar.text_input("Add a new ETF ticker")
-if st.sidebar.button("Add") and new_ticker:
-    etfs.append(new_ticker.upper())
-    st.sidebar.success(f"{new_ticker.upper()} added.")
-    
-tickers_to_remove = st.sidebar.multiselect("Remove tickers", etfs)
-if st.sidebar.button("Remove"):
-    etfs = [etf for etf in etfs if etf not in tickers_to_remove]
-    st.sidebar.success(f"Removed: {', '.join(tickers_to_remove)}")
 
-# Data collection and calculations
-data_summary = []
-end_date = pd.Timestamp.now()
-start_date = end_date - pd.DateOffset(days=22)
+# Sidebar for adding new tickers
+st.sidebar.header("Add or Remove Tickers")
 
+# Add new ticker input
+new_ticker = st.sidebar.text_input("Enter a new ETF ticker (e.g., AAPL)")
+
+# Add ticker button
+if st.sidebar.button("Add Ticker"):
+    if new_ticker.upper() not in default_etfs:
+        default_etfs.append(new_ticker.upper())  # Add ticker to the list
+        st.sidebar.success(f"Added {new_ticker.upper()} to the list.")
+    else:
+        st.sidebar.warning(f"{new_ticker.upper()} is already in the list.")
+
+# Allow the user to remove tickers from the list
+tickers_to_remove = st.sidebar.multiselect("Select tickers to remove", default_etfs)
+
+# Remove selected tickers
+if st.sidebar.button("Remove Selected Tickers"):
+    for ticker in tickers_to_remove:
+        default_etfs.remove(ticker)
+    st.sidebar.success(f"Removed selected tickers: {', '.join(tickers_to_remove)}")
+
+# Re-fetch data and re-run calculations for the updated ticker list
+etfs = default_etfs  # Updated list of tickers
+z_score_list = []
+current_price_list = []
+skewness_list = []
+kurtosis_list = []
+
+# Loop through each ETF ticker and calculate Z-score, skewness, kurtosis
 for etf in etfs:
-    data = yf.download(etf, start=start_date, end=end_date)["Adj Close"].dropna()
+    # Get historical data for the last month
+    end_date = pd.Timestamp.now()
+    start_date = end_date - pd.DateOffset(days=22)  # Last month's data
+    data = yf.download(etf, start=start_date, end=end_date)["Adj Close"]
 
-    if data.empty:
-        st.warning(f"No data for {etf}. Skipping.")
-        continue
+    # Calculate mean and standard deviation for the last month
+    mean_last_month = data.mean()
+    std_last_month = data.std()
 
-    # Calculate Z-score, skewness, and kurtosis
-    mean = data.mean()
-    std = data.std()
-    st.write(std)
-    # Calculate Z-score only if std is not NaN or 0, else set Z-score to 0
-    last_price = data.iloc[-1]
-    z_score = (last_price - mean) / std
-    skewness = skew(data) if len(data) > 1 else 0
-    kurtosis_val = kurtosis(data) if len(data) > 1 else 0
+    # Calculate skewness and kurtosis for the last month
+    skewness_last_month = skew(data)
+    kurtosis_last_month = kurtosis(data)
+    skewness_list.append(round(skewness_last_month, 2))
+    kurtosis_list.append(round(kurtosis_last_month, 2))
 
-    # Append results
-    data_summary.append({
-        "ETF": etf,
-        "Current Price": round(last_price, 2),
-        "Z Score": round(z_score, 2),
-        "Skewness": round(skewness, 2),
-        "Kurtosis": round(kurtosis_val, 2)
-    })
+    # Get the most recent data point (current price)
+    current_price = data.iloc[-1]
+    current_price_list.append(round(current_price, 2))
 
-# Display results
-df = pd.DataFrame(data_summary)
-st.table(df.sort_values("Z Score"))
+    # Calculate Z score for the current price
+    z_score_current_price = round((current_price - mean_last_month) / std_last_month, 2)
+    z_score_list.append(z_score_current_price)
+
+# Create DataFrame to display the results
+df = pd.DataFrame({
+    "ETF Symbol": etfs,
+    "Current Price": current_price_list,
+    "Z Score": z_score_list,
+    "Skewness": skewness_list,
+    "Kurtosis": kurtosis_list
+})
+
+# Display the table sorted by Z-Score
+st.table(df.sort_values(by='Z Score', ascending=True))
