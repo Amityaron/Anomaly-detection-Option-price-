@@ -31,34 +31,37 @@ n = 22  # number of periods for moving average
 l = 2   # number of standard deviations for lower band
 u = 2   # number of standard deviations for upper band
 
+if 'Close' in spy.columns:
 # Calculate rolling mean and standard deviation
-spy['SMA'] = spy['Close'].rolling(n).mean()
-spy['STD'] = spy['Close'].rolling(n).std()
+    spy['SMA'] = spy['Close'].rolling(n).mean()
+    spy['STD'] = spy['Close'].rolling(n).std()
+    
+    # Calculate upper and lower bands
+    spy['Upper'] = spy['SMA'] + u * spy['STD']
+    spy['Lower'] = spy['SMA'] - l * spy['STD']
+    
+    spy['Close'], spy['Lower'] = spy['Close'].align(spy['Lower'], axis=0)
+    spy['Close'], spy['Upper'] = spy['Close'].align(spy['Upper'], axis=0)
+    spy.dropna(subset=['Close', 'Lower', 'Upper'], inplace=True)
+    #spy.columns = spy.columns.droplevel(symbol)
+    
+    # Generate buy signals when the Close price crosses below the lower band
+    spy['Signal'] = 0
+    spy.loc[spy['Close'] < spy['Lower'],'Signal'] = 1
+    
+    # Remove consecutive signals to only show the first buy signal
+    spy['Signal'] = spy['Signal'].diff().fillna(0)
+    spy.loc[spy['Signal'] < 0,'Signal'] = 0
+    
+    # Generate sell signals when the Close price crosses above the upper band
+    spy['Sell_Signal'] = 0
+    spy.loc[spy['Close'] > spy['Upper'],'Sell_Signal'] = 1
+    
+    # Remove consecutive signals to only show the first sell signal
+    spy['Sell_Signal'] = spy['Sell_Signal'].diff().fillna(0)
+    spy.loc[spy['Sell_Signal'] < 0, 'Sell_Signal'] = 0
 
-# Calculate upper and lower bands
-spy['Upper'] = spy['SMA'] + u * spy['STD']
-spy['Lower'] = spy['SMA'] - l * spy['STD']
 
-# Drop rows with NaN values from rolling calculations
-spy['Close'], spy['Lower'] = spy['Close'].align(spy['Lower'], axis=0, join='inner')
-spy['Close'], spy['Upper'] = spy['Close'].align(spy['Upper'], axis=0, join='inner')
-#spy.columns = spy.columns.droplevel(widgetuser_input)
-
-# Generate buy signals when the Close price crosses below the lower band
-spy['Signal'] = 0
-spy.loc[spy['Close'] < spy['Lower'], 'Signal'] = 1
-
-# Remove consecutive signals to only show the first buy signal
-spy['Signal'] = spy['Signal'].diff().fillna(0)
-spy.loc[spy['Signal'] < 0, 'Signal'] = 0
-
-# Generate sell signals when the Close price crosses above the upper band
-spy['Sell_Signal'] = 0
-spy.loc[spy['Close'] > spy['Upper'], 'Sell_Signal'] = 1
-
-# Remove consecutive signals to only show the first sell signal
-spy['Sell_Signal'] = spy['Sell_Signal'].diff().fillna(0)
-spy.loc[spy['Sell_Signal'] < 0, 'Sell_Signal'] = 0
 
 # Calculate percentage changes for buy signals
 lower_dates = spy.index[spy['Signal'] == 1].tolist()
