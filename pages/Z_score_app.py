@@ -69,8 +69,6 @@ for etf in etfs:
     # Calculate skewness and kurtosis for the last month
     skewness_last_month =  skew(data) 
     kurtosis_last_month = kurtosis(data) 
-    print(skewness_last_month)
-    print(kurtosis_last_month)
     skewness_list.append(skewness_last_month)
     kurtosis_list.append(kurtosis_last_month)
 
