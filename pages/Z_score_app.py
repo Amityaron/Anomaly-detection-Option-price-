@@ -1,16 +1,13 @@
 # Import necessary libraries
 import pandas as pd
 import numpy as np
-import datetime
-import matplotlib.pyplot as plt
 import yfinance as yf
 from scipy.stats import skew, kurtosis
 import streamlit as st
 
 # Set the app title 
 st.title('Welcome to my Anomaly Detection App')
-st.title('Based on Z-Score') 
-
+st.subheader('Based on Z-Score')
 
 # Skewness Explanation
 st.markdown("""
@@ -23,8 +20,7 @@ st.markdown("""
 """)
 
 # Default ETF tickers
-default_etfs = ["QQQ","SPY","XLK","SOXX","XLF"]
-
+default_etfs = ["QQQ", "SPY", "XLK", "SOXX", "XLF"]
 
 # Sidebar for adding new tickers
 st.sidebar.header("Add or Remove Tickers")
@@ -61,23 +57,29 @@ for etf in etfs:
     # Get historical data for the last month
     end_date = pd.Timestamp.now()
     start_date = end_date - pd.DateOffset(days=22)  # Last month's data
-    data = yf.download(etf, start=start_date, end=end_date)["Adj Close"]
+    data = yf.download(etf, start=start_date, end=end_date)["Adj Close"].dropna()
+
+    # Ensure we have sufficient data before proceeding
+    if data.empty:
+        st.warning(f"No data for {etf}. Skipping.")
+        continue
 
     # Calculate mean and standard deviation for the last month
     mean_last_month = data.mean()
     std_last_month = data.std()
-    # Calculate skewness and kurtosis for the last month
-    skewness_last_month =  skew(data) 
-    kurtosis_last_month = kurtosis(data) 
+
+    # Calculate skewness and kurtosis, default to 0 if invalid
+    skewness_last_month = round(float(skew(data)), 2) if len(data) > 1 else 0
+    kurtosis_last_month = round(float(kurtosis(data)), 2) if len(data) > 1 else 0
     skewness_list.append(skewness_last_month)
     kurtosis_list.append(kurtosis_last_month)
 
     # Get the most recent data point (current price)
-    current_price = data.iloc[-1]
+    current_price = float(data.iloc[-1])
     current_price_list.append(round(current_price, 2))
 
     # Calculate Z score for the current price
-    z_score_current_price = round((current_price - mean_last_month) / std_last_month, 2)
+    z_score_current_price = round((current_price - mean_last_month) / std_last_month, 2) if std_last_month != 0 else 0
     z_score_list.append(z_score_current_price)
 
 # Create DataFrame to display the results
@@ -91,7 +93,6 @@ df = pd.DataFrame({
 
 # Fill NaN values and sort by Z-Score
 df = df.fillna(0)  # Fill NaN values with 0
-#df_sorted = df.sort_values(by='Z Score', ascending=True, na_position='last')
 
 # Display the table
 st.table(df)
