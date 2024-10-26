@@ -77,8 +77,9 @@ def get_options_table(ticker_symbol, expiration_date):
     ticker = yf.Ticker(ticker_symbol)
 
     # Get the current stock price
+    st.write(ticker.history(period='1d')['Close'])
     stock_price =float( ticker.history(period='1d')['Close'][0] )
-
+    
     # Get the options chain for the chosen expiration date
     options_chain = ticker.option_chain(expiration_date)
 
