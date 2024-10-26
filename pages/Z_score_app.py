@@ -65,8 +65,8 @@ for etf in etfs:
         continue
 
     # Calculate mean and standard deviation for the last month
-    mean_last_month = data.mean()
-    std_last_month = data.std()
+    mean_last_month = float (data.mean())
+    std_last_month = float(data.std())
 
     # Calculate skewness and kurtosis, default to 0 if invalid
     skewness_last_month = round(float(skew(data)), 2) if len(data) > 1 else 0
