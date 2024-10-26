@@ -21,7 +21,7 @@ st.markdown("""
 """)
 
 # Default ETF tickers
-etfs = ["CNDX.L", "CSPX.L", "IUIT.L", "IUFS.L", "IWRD.L"]
+etfs = ["QQQ", "XLK", "XLF", "SOXX", "URTH"]
 
 # Sidebar ticker management
 st.sidebar.header("Manage Tickers")
