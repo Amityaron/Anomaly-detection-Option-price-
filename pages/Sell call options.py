@@ -16,15 +16,22 @@ widgetuser_input = st.text_input('Enter a ticker based on Yahoo Finance:', 'SPY'
 days_for_volatility = st.number_input('Enter the number of days to estimate volatility:', 60) 
 probability_threshold = st.slider('Select the minimum probability of expiring OTM:', 0.0, 1.0, 0.9)
 
-def get_stock_price(ticker_symbol):
+def get_latest_stock_price(ticker_symbol):
     ticker = yf.Ticker(ticker_symbol)
-    history = ticker.history(period='1d')
-    st.write(history)
-    if not history.empty:
-        return float(history['Close'].iloc[0])
-    else:
-        st.error("No historical data available for the specified ticker.")
+    try:
+        # Fetch historical data
+        history = ticker.history(period='max')  # Get the maximum available data
+        if not history.empty:
+            # Get the last available closing price
+            stock_price = history['Close'].iloc[-1]
+            return stock_price
+        else:
+            st.error(f"No historical data available for {ticker_symbol}.")
+            return None
+    except Exception as e:
+        st.error(f"Error fetching data: {e}")
         return None
+
 
 def get_options_table(ticker_symbol, expiration_date):
     ticker = yf.Ticker(ticker_symbol)
