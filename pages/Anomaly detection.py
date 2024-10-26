@@ -83,72 +83,74 @@ st.write("Current price:", round(spy.iloc[-1]['Close'], 2))
 st.table(df.round(2))
 
 # Monthly Percentage Changes
+import pandas as pd
+import yfinance as yf
+import matplotlib.pyplot as plt
+import seaborn as sns
+import streamlit as st
 
-# Displaying the section header
 st.subheader('Monthly Percentage Changes')
 
-# Setting the start and end dates
+# Start and end dates for downloading historical data
 start_date_sp500 = '1990-01-01'
 end_date_sp500 = pd.Timestamp.now()
 
-# Downloading historical data for the selected symbol
-symbol = st.text_input('Enter the stock symbol:', 'SPY')
+# Download the data for the specified ticker symbol
+symbol = st.text_input("Enter a ticker symbol:", "SPY")
 sp500_data = yf.download(symbol, start=start_date_sp500, end=end_date_sp500)
+
+# Ensure the data is sorted by date
 sp500_data.sort_index(inplace=True)
 
-# Calculating daily and monthly percentage changes
+# Calculate daily and monthly returns
 sp500_data['Daily Return'] = sp500_data['Adj Close'].pct_change()
 monthly_returns = sp500_data['Adj Close'].resample('M').ffill().pct_change() * 100
 
-# Convert monthly_returns to Series if it's not already
-if not isinstance(monthly_returns, pd.Series):
-    monthly_returns = pd.Series(monthly_returns)
+# Verify and convert `monthly_returns` to a Series if needed
+if isinstance(monthly_returns, pd.DataFrame):
+    monthly_returns = monthly_returns.squeeze()  # Converts single-column DataFrame to Series
 
-# Proceed only if monthly_returns is not empty
-if not monthly_returns.empty:
-    # Creating DataFrame for monthly returns and additional columns
+# Check if monthly_returns is empty or invalid
+if monthly_returns.empty:
+    st.write("Error: No monthly returns data available to display.")
+else:
+    # Creating DataFrame for monthly returns and other related columns
     monthly_returns_df = monthly_returns.to_frame(name='Monthly Return')
     monthly_returns_df['Year'] = monthly_returns_df.index.year
     monthly_returns_df['Month'] = monthly_returns_df.index.month
     monthly_returns_df['Month Name'] = monthly_returns_df.index.strftime('%B')
 
-    # Data for the current year to highlight in the plot
+    # Filter data for the latest year
     last_year = monthly_returns_df[monthly_returns_df['Year'] == monthly_returns_df['Year'].max()]
     last_year_returns = last_year.set_index('Month Name')['Monthly Return']
 
-    # Calculate the total number of months of data
+    # Get the start date for the data and calculate total months
     start_date_sp500 = sp500_data.index[0]
-    total_months = (end_date_sp500.year - start_date_sp500.year) * 12
+    total_months = int(end_date_sp500.year - start_date_sp500.year)
 
-    # Create the boxplot
+    # Plotting
     fig, ax = plt.subplots(figsize=(15, 8))
-    sns.boxplot(
-        x='Month Name',
-        y='Monthly Return',
-        data=monthly_returns_df,
-        order=['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
-        ax=ax
-    )
-    
-    # Highlight last year's returns in red
+    sns.boxplot(x='Month Name', y='Monthly Return', data=monthly_returns_df,
+                order=['January', 'February', 'March', 'April', 'May', 'June', 
+                       'July', 'August', 'September', 'October', 'November', 'December'], ax=ax)
     ax.scatter(last_year_returns.index, last_year_returns.values, color='red', zorder=5, label='Last Year Returns')
-    
-    # Customizing the plot
     ax.set_xticklabels(ax.get_xticklabels(), rotation=90)
-    ax.set_title(f'Monthly Percentage Changes for {symbol} from {start_date_sp500.date()} until {end_date_sp500.date()}')
+    ax.set_title(f'Monthly Percentage Changes for {symbol} from {start_date_sp500} to {end_date_sp500} (Total observations: {total_months})')
     ax.set_xlabel('Month')
     ax.set_ylabel('Percentage Change')
     ax.grid(True)
     ax.axhline(y=0, color='r', linestyle='--')
     ax.legend()
 
-    # Displaying the plot and additional information in Streamlit
-    st.write(f'Monthly Percentage Changes for: {symbol}')
-    st.write(f'Data from {start_date_sp500.date()} until {end_date_sp500.date()}')
-    st.write(f'Total months observed: {total_months}')
+    # Display the plot and additional information
     st.pyplot(fig)
-else:
-    st.write("Error: No monthly returns data available to display.")
+    st.write(f'Monthly Percentage Changes for {symbol}')
+    st.write(f'Data from {start_date_sp500} until {end_date_sp500}')
+    st.write(f'Total number of months observed: {total_months}')
+
+
+
+    
 
 
 
