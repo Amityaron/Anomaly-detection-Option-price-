@@ -27,8 +27,8 @@ st.markdown(
 )
 
 # Define default ETF tickers
-default_etfs = ["CNDX.L", "CSPX.L", "IUIT.L", "IUFS.L", "IWRD.L", "ISEU.L", "IBIT", "BTC-USD", "XLK", "SOXX", "IVW", "IETC", "IXN", "URTH", "ACWI"]
-
+#default_etfs = ["CNDX.L", "CSPX.L", "IUIT.L", "IUFS.L", "IWRD.L", "ISEU.L", "IBIT", "BTC-USD", "XLK", "SOXX", "IVW", "IETC", "IXN", "URTH", "ACWI"]
+default_etfs = ["CNDX.L", "CSPX.L", "IUIT.L", "IUFS.L", "IWRD.L"]
 # Sidebar for adding/removing tickers
 st.sidebar.header("Add or Remove Tickers")
 new_ticker = st.sidebar.text_input("Enter a new ETF ticker (e.g., AAPL)")
