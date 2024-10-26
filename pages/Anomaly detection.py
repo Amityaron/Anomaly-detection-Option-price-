@@ -83,26 +83,73 @@ st.write("Current price:", round(spy.iloc[-1]['Close'], 2))
 st.table(df.round(2))
 
 # Monthly Percentage Changes
+import pandas as pd
+import yfinance as yf
+import matplotlib.pyplot as plt
+import seaborn as sns
+import streamlit as st
+
+# Displaying the section header
 st.subheader('Monthly Percentage Changes')
-sp500_data = yf.download(symbol, start='1990-01-01', end=pd.Timestamp.now())
+
+# Setting the start and end dates
+start_date_sp500 = '1990-01-01'
+end_date_sp500 = pd.Timestamp.now()
+
+# Downloading historical data for the selected symbol
+symbol = st.text_input('Enter the stock symbol:', 'SPY')
+sp500_data = yf.download(symbol, start=start_date_sp500, end=end_date_sp500)
 sp500_data.sort_index(inplace=True)
 
+# Calculating daily and monthly percentage changes
 sp500_data['Daily Return'] = sp500_data['Adj Close'].pct_change()
-monthly_returns = round(sp500_data['Adj Close'].resample('M').ffill().pct_change(), 3) * 100
-monthly_returns_df = monthly_returns.to_frame(name='Monthly Return')
-monthly_returns_df['Year'] = monthly_returns_df.index.year
-monthly_returns_df['Month'] = monthly_returns_df.index.month
-monthly_returns_df['Month Name'] = monthly_returns_df.index.strftime('%B')
+monthly_returns = sp500_data['Adj Close'].resample('M').ffill().pct_change() * 100
 
-last_year = monthly_returns_df[monthly_returns_df['Year'] == monthly_returns_df['Year'].max()]
-last_year_returns = last_year.set_index('Month Name')['Monthly Return']
-fig, ax = plt.subplots(figsize=(15, 8))
-sns.boxplot(x='Month Name', y='Monthly Return', data=monthly_returns_df,
-            order=['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'], ax=ax)
-ax.scatter(last_year_returns.index, last_year_returns.values, color='red', zorder=5, label='Last Year Returns')
-ax.set_xticklabels(ax.get_xticklabels(), rotation=90)
-ax.axhline(y=0, color='r', linestyle='--')
-st.pyplot(fig)
+# Verifying that monthly_returns is a Series before converting it to a DataFrame
+if isinstance(monthly_returns, pd.Series):
+    monthly_returns_df = monthly_returns.to_frame(name='Monthly Return')
+    monthly_returns_df['Year'] = monthly_returns_df.index.year
+    monthly_returns_df['Month'] = monthly_returns_df.index.month
+    monthly_returns_df['Month Name'] = monthly_returns_df.index.strftime('%B')
+
+    # Data for the current year to highlight in the plot
+    last_year = monthly_returns_df[monthly_returns_df['Year'] == monthly_returns_df['Year'].max()]
+    last_year_returns = last_year.set_index('Month Name')['Monthly Return']
+
+    # Calculate the total number of months of data
+    start_date_sp500 = sp500_data.index[0]
+    total_months = (end_date_sp500.year - start_date_sp500.year) * 12
+
+    # Create the boxplot
+    fig, ax = plt.subplots(figsize=(15, 8))
+    sns.boxplot(
+        x='Month Name',
+        y='Monthly Return',
+        data=monthly_returns_df,
+        order=['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
+        ax=ax
+    )
+    
+    # Highlight last year's returns in red
+    ax.scatter(last_year_returns.index, last_year_returns.values, color='red', zorder=5, label='Last Year Returns')
+    
+    # Customizing the plot
+    ax.set_xticklabels(ax.get_xticklabels(), rotation=90)
+    ax.set_title(f'Monthly Percentage Changes for {symbol} from {start_date_sp500.date()} until {end_date_sp500.date()}')
+    ax.set_xlabel('Month')
+    ax.set_ylabel('Percentage Change')
+    ax.grid(True)
+    ax.axhline(y=0, color='r', linestyle='--')
+    ax.legend()
+
+    # Displaying the plot and additional information in Streamlit
+    st.write(f'Monthly Percentage Changes for: {symbol}')
+    st.write(f'Data from {start_date_sp500.date()} until {end_date_sp500.date()}')
+    st.write(f'Total months observed: {total_months}')
+    st.pyplot(fig)
+else:
+    st.write("Error: Monthly returns could not be calculated.")
+
 
 # Calculate Probabilities of Positive Monthly Returns
 monthly_positive_counts = {month: 0 for month in ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']}
