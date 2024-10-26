@@ -67,10 +67,8 @@ for etf in etfs:
     mean_last_month = data.mean()
     std_last_month = data.std()
     # Calculate skewness and kurtosis for the last month
-    skewness_last_month = skew(data)
-    kurtosis_last_month = kurtosis(data)
-    st.write(skewness_last_month)
-    st.write(kurtosis_last_month)
+    skewness_last_month = int( skew(data) )
+    kurtosis_last_month = int (kurtosis(data) )
     skewness_list.append(round(skewness_last_month, 2))
     kurtosis_list.append(round(kurtosis_last_month, 2))
 
