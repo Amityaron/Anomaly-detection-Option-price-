@@ -12,7 +12,7 @@ st.title('Sell Call Options Strategy')
 st.write('Sell call options strategy based on the Black-Scholes Model.')
 
 # Create a text input 
-widgetuser_input = st.text_input('Enter a ticker based on Yahoo Finance:', 'SOXX') 
+widgetuser_input = st.text_input('Enter a ticker based on Yahoo Finance:', 'SPY') 
 days_for_volatility = st.number_input('Enter the number of days to estimate volatility:', 60) 
 probability_threshold = st.slider('Select the minimum probability of expiring OTM:', 0.0, 1.0, 0.9)
 
