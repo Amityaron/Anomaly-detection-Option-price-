@@ -83,11 +83,6 @@ st.write("Current price:", round(spy.iloc[-1]['Close'], 2))
 st.table(df.round(2))
 
 # Monthly Percentage Changes
-import pandas as pd
-import yfinance as yf
-import matplotlib.pyplot as plt
-import seaborn as sns
-import streamlit as st
 
 # Displaying the section header
 st.subheader('Monthly Percentage Changes')
@@ -105,8 +100,13 @@ sp500_data.sort_index(inplace=True)
 sp500_data['Daily Return'] = sp500_data['Adj Close'].pct_change()
 monthly_returns = sp500_data['Adj Close'].resample('M').ffill().pct_change() * 100
 
-# Verifying that monthly_returns is a Series before converting it to a DataFrame
-if isinstance(monthly_returns, pd.Series):
+# Convert monthly_returns to Series if it's not already
+if not isinstance(monthly_returns, pd.Series):
+    monthly_returns = pd.Series(monthly_returns)
+
+# Proceed only if monthly_returns is not empty
+if not monthly_returns.empty:
+    # Creating DataFrame for monthly returns and additional columns
     monthly_returns_df = monthly_returns.to_frame(name='Monthly Return')
     monthly_returns_df['Year'] = monthly_returns_df.index.year
     monthly_returns_df['Month'] = monthly_returns_df.index.month
@@ -148,7 +148,10 @@ if isinstance(monthly_returns, pd.Series):
     st.write(f'Total months observed: {total_months}')
     st.pyplot(fig)
 else:
-    st.write("Error: Monthly returns could not be calculated.")
+    st.write("Error: No monthly returns data available to display.")
+
+
+
 
 
 # Calculate Probabilities of Positive Monthly Returns
