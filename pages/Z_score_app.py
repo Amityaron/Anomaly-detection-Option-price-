@@ -21,7 +21,7 @@ st.markdown("""
 """)
 
 # Default ETF tickers
-etfs = ["SPY", "XLK", "QQQ", "XLF", "URTH"]
+etfs = ["CNDX.L", "CSPX.L", "IUIT.L", "IUFS.L", "IWRD.L"]
 
 # Sidebar ticker management
 st.sidebar.header("Manage Tickers")
@@ -51,9 +51,13 @@ for etf in etfs:
     mean = data.mean()
     std = data.std()
 
-    # Check if std is NaN or 0 before calculating Z-score
+    # Calculate Z-score only if std is not NaN or 0, else set Z-score to 0
     last_price = data.iloc[-1]
-    z_score = (last_price - mean) / std if std and not np.isnan(std) else 0
+    if pd.notna(std) and std != 0:
+        z_score = (last_price - mean) / std
+    else:
+        z_score = 0
+
     skewness = skew(data) if len(data) > 1 else 0
     kurtosis_val = kurtosis(data) if len(data) > 1 else 0
 
