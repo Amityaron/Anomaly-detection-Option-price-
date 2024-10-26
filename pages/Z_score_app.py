@@ -91,7 +91,7 @@ df = pd.DataFrame({
 
 # Fill NaN values and sort by Z-Score
 df = df.fillna(0)  # Fill NaN values with 0
-df_sorted = df.sort_values(by='Z Score', ascending=True, na_position='last')
+#df_sorted = df.sort_values(by='Z Score', ascending=True, na_position='last')
 
 # Display the table
-st.table(df_sorted)
+st.table(df)
