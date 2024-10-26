@@ -90,4 +90,4 @@ df = pd.DataFrame({
 })
 
 # Display the table sorted by Z-Score
-st.table(df.sort_values(by='Z Score', ascending=True))
+st.table(df.sort_values(by='Z Score', ascending=True, na_position='last').fillna(0))
