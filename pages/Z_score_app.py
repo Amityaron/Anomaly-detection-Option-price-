@@ -87,7 +87,7 @@ kurtosis_list = []
 for etf in etfs:
     # Get historical data for the last month
     end_date = pd.Timestamp.now()
-    start_date = end_date - pd.DateOffset(months=1)  # Last month's data
+    start_date = end_date - pd.DateOffset(days=22)  # Last 22 day's data
     data = yf.download(etf, start=start_date, end=end_date)["Adj Close"]
 
     # Calculate mean and standard deviation for the last month
