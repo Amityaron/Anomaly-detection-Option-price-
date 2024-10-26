@@ -19,6 +19,7 @@ probability_threshold = st.slider('Select the minimum probability of expiring OT
 def get_stock_price(ticker_symbol):
     ticker = yf.Ticker(ticker_symbol)
     history = ticker.history(period='1d')
+    st.write(history)
     if not history.empty:
         return float(history['Close'].iloc[0])
     else:
