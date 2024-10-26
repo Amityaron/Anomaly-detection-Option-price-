@@ -20,7 +20,7 @@ st.markdown("""
 """)
 
 # Default ETF tickers
-default_etfs = ["QQQ", "SPY", "XLK", "SOXX", "XLF","BTC-USD","URTH"]
+default_etfs = ["QQQ", "SPY", "XLK", "SOXX", "XLF","BTC-USD","URTH","IXN"]
 
 # Sidebar for adding new tickers
 st.sidebar.header("Add or Remove Tickers")
