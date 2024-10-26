@@ -22,7 +22,9 @@ end_date = st.date_input('End Date', value=pd.to_datetime('2024-10-24'))
 # Download stock data from Yahoo Finance
 symbol = widgetuser_input
 spy = yf.download(symbol, start=start_date, end=end_date)
-spy.columns = spy.columns.droplevel(symbol)
+# Only drop a level if spy.columns has multiple levels
+if isinstance(spy.columns, pd.MultiIndex):
+    spy.columns = spy.columns.droplevel(0)
 
 # Define Bollinger Band parameters
 n = 22  # number of periods for moving average
