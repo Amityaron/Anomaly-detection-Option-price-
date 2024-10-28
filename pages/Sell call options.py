@@ -23,15 +23,15 @@ st.write("This app displays call and put options with their Option Pricing Model
 ticker = st.sidebar.text_input("Enter a stock ticker (e.g., AAPL)", "AAPL")
 opm_filter = st.sidebar.slider("Filter by OPM", min_value=0.0, max_value=100.0, value=(0.0, 100.0))
 
-# Function to fetch options data with caching
+# Function to fetch options data (expiration dates only, to be cacheable)
 @st.cache_data
-def fetch_options_data(ticker):
+def fetch_expiration_dates(ticker):
     stock = yf.Ticker(ticker)
-    expiration_dates = stock.options
-    return stock, expiration_dates
+    return stock.options
 
+# Get stock and expiration dates
 try:
-    stock, expiration_dates = fetch_options_data(ticker)
+    expiration_dates = fetch_expiration_dates(ticker)
     if not expiration_dates:
         st.error("No options data available for this ticker.")
     else:
@@ -39,6 +39,7 @@ try:
         exp_date = st.sidebar.selectbox("Select expiration date", expiration_dates)
 
         # Fetch options chain for the selected expiration date
+        stock = yf.Ticker(ticker)  # Get the non-cached stock object to fetch options chain
         options_chain = stock.option_chain(exp_date)
         calls = options_chain.calls
         puts = options_chain.puts
