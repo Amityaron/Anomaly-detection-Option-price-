@@ -1,7 +1,7 @@
 # Anomaly-detection-Option-price-
 This application will change your way you see the stock market.
 
-https://anomaly-detection-option-price.streamlit.app/
+[https://anomaly-detection-option-price.streamlit.app/](https://main-app1.streamlit.app/)
 
 This application will transform the way you perceive the stock market. 
 
