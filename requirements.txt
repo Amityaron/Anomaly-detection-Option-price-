@@ -5,4 +5,4 @@ pandas_datareader
 datetime
 seaborn
 scipy
-bayes_opt 
+BayesianOptimization 
