@@ -8,7 +8,7 @@ import streamlit as st
 # Set the app title 
 st.title('Welcome to my Anomaly Detection App')
 st.subheader('Based on Z-Score')
-
+st.image(pages/skewness.png, caption='Anomaly Detection App', use_column_width=True)
 # Skewness Explanation
 st.markdown("""
     ### Skewness Definitions:
