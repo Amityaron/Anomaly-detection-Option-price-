@@ -15,21 +15,22 @@ def black_scholes(S, K, T, r, sigma, option_type="call"):
     elif option_type == "put":
         return K * np.exp(-r * T) * norm.cdf(-d2) - S * norm.cdf(-d1)
 
-# Function to calculate probability of reaching OPM
-def probability_opm(S, K, T, sigma, option_type="call"):
-    d1 = (np.log(S / K) + (0.5 * sigma ** 2) * T) / (sigma * np.sqrt(T))
+# Function to calculate probability of expiring OTM
+def probability_otm(S, K, T, sigma, option_type="call"):
+    d1 = (np.log(S / K) + (r + 0.5 * sigma ** 2) * T) / (sigma * np.sqrt(T))
+    d2 = d1 - sigma * np.sqrt(T)
     if option_type == "call":
-        return norm.cdf(d1)  # Probability of reaching/exceeding the OPM price for calls
+        return 1 - norm.cdf(d2)  # Probability of expiring OTM for calls
     elif option_type == "put":
-        return 1 - norm.cdf(d1)  # Probability of reaching/exceeding the OPM price for puts
+        return norm.cdf(d2)  # Probability of expiring OTM for puts
 
 # App title and description
-st.title("Options Pricing Model App with Probability of Reaching OPM")
-st.write("This app displays call and put options with their Option Pricing Model (OPM) values and the probability of reaching OPM by expiration. Filter by the probability of OPM.")
+st.title("Options Selling Model App with Probability of Expiring OTM")
+st.write("This app displays sell put and call options with their Option Pricing Model (OPM) values and the probability of expiring OTM by expiration. Filter by the probability of expiring OTM.")
 
 # Sidebar inputs
 ticker = st.sidebar.text_input("Enter a stock ticker (e.g., AAPL)", "AAPL")
-opm_prob_filter = st.sidebar.slider("Filter by Probability of Reaching OPM", min_value=0.0, max_value=1.0, value=(0.0, 1.0))
+otm_prob_filter = st.sidebar.slider("Filter by Probability of Expiring OTM", min_value=0.0, max_value=1.0, value=(0.0, 1.0))
 
 # Function to fetch options data (expiration dates only, to be cacheable)
 @st.cache_data
@@ -59,8 +60,8 @@ try:
         # Time to expiration
         T = (datetime.strptime(exp_date, "%Y-%m-%d") - datetime.now()).days / 365
 
-        # Calculate OPM and probability of reaching OPM for each option
-        def calculate_opm_and_opm_prob(df, option_type):
+        # Calculate OPM and probability of expiring OTM for each option
+        def calculate_opm_and_otm_prob(df, option_type):
             df = df.dropna(subset=['impliedVolatility'])
             df["OPM"] = df.apply(
                 lambda x: black_scholes(
@@ -73,8 +74,8 @@ try:
                 ),
                 axis=1
             )
-            df["P(OPM)"] = df.apply(
-                lambda x: probability_opm(
+            df["P(OTM)"] = df.apply(
+                lambda x: probability_otm(
                     S=stock_price,
                     K=x["strike"],
                     T=T,
@@ -85,19 +86,19 @@ try:
             )
             return df
 
-        # Calculate OPM and P(OPM) for calls and puts
-        calls = calculate_opm_and_opm_prob(calls, "call")
-        puts = calculate_opm_and_opm_prob(puts, "put")
+        # Calculate OPM and P(OTM) for calls and puts
+        calls = calculate_opm_and_otm_prob(calls, "call")
+        puts = calculate_opm_and_otm_prob(puts, "put")
 
         # Concatenate calls and puts into a single DataFrame
-        options_df = pd.concat([calls.assign(Type="Call"), puts.assign(Type="Put")])
+        options_df = pd.concat([calls.assign(Type="Sell Call"), puts.assign(Type="Sell Put")])
 
-        # Filter based on Probability of Reaching OPM range
-        filtered_options = options_df[(options_df["P(OPM)"] >= opm_prob_filter[0]) & (options_df["P(OPM)"] <= opm_prob_filter[1])]
+        # Filter based on Probability of Expiring OTM range
+        filtered_options = options_df[(options_df["P(OTM)"] >= otm_prob_filter[0]) & (options_df["P(OTM)"] <= otm_prob_filter[1])]
 
         # Display the filtered options
-        st.write("### Filtered Options Table")
-        st.write(filtered_options[["Type", "strike", "lastPrice", "impliedVolatility", "OPM", "P(OPM)"]])
+        st.write("### Filtered Options for Selling")
+        st.write(filtered_options[["Type", "strike", "lastPrice", "impliedVolatility", "OPM", "P(OTM)"]])
 
 except Exception as e:
     st.error("Could not retrieve data for the provided ticker symbol. Please check the ticker and try again.")
