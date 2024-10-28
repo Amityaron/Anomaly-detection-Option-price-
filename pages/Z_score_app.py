@@ -65,8 +65,12 @@ for etf in etfs:
         continue
 
     # Calculate mean and standard deviation for the last month
-    mean_last_month = float (data.mean())
-    std_last_month = float(data.std())
+    # Ensure 'data' is a Series by selecting only the 'Adj Close' column if 'data' is a DataFrame
+    mean_last_month = float(data['Adj Close'].mean()) if isinstance(data, pd.DataFrame) else float(data.mean())
+    std_last_month = float(data['Adj Close'].std()) if isinstance(data, pd.DataFrame) else float(data.std())
+
+    #mean_last_month = float (data.mean())
+    #std_last_month = float(data.std())
 
     # Calculate skewness and kurtosis, default to 0 if invalid
     skewness_last_month = round(float(skew(data)), 2) if len(data) > 1 else 0
