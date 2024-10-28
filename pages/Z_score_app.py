@@ -67,7 +67,6 @@ for etf in etfs:
     # Calculate mean and standard deviation for the last month
     # Ensure 'data' is a Series by selecting only the 'Adj Close' column if 'data' is a DataFrame
     
-    print(data.mean())
     mean_last_month = float (data.mean())
     std_last_month = float(data.std())
 
