@@ -16,7 +16,7 @@ def black_scholes(S, K, T, r, sigma, option_type="call"):
         return K * np.exp(-r * T) * norm.cdf(-d2) - S * norm.cdf(-d1)
 
 # Function to calculate probability of expiring OTM
-def probability_otm(S, K, T, sigma, option_type="call"):
+def probability_otm(S, K, T, r, sigma, option_type="call"):
     d1 = (np.log(S / K) + (r + 0.5 * sigma ** 2) * T) / (sigma * np.sqrt(T))
     d2 = d1 - sigma * np.sqrt(T)
     if option_type == "call":
@@ -79,6 +79,7 @@ try:
                     S=stock_price,
                     K=x["strike"],
                     T=T,
+                    r=risk_free_rate,
                     sigma=x["impliedVolatility"],
                     option_type=option_type
                 ),
