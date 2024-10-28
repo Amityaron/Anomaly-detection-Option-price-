@@ -6,3 +6,4 @@ datetime
 seaborn
 scipy
 BayesianOptimization 
+bayesian-optimization
