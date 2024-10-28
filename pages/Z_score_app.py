@@ -68,7 +68,6 @@ for etf in etfs:
     # Ensure 'data' is a Series by selecting only the 'Adj Close' column if 'data' is a DataFrame
     
     st.write(data.mean())
-    st.remove(data.mean())
     mean_last_month = float (data.mean())
     std_last_month = float(data.std())
 
