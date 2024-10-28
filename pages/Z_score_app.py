@@ -20,7 +20,11 @@ st.markdown("""
 """)
 
 # Default ETF tickers
-default_etfs = ["QQQ", "SPY", "XLK", "SOXX", "XLF","BTC-USD","URTH","IXN"]
+default_etfs = ["QQQ", "SPY", "XLK", "SOXX", "XLF", "BTC-USD", "URTH", "IXN"]
+
+# Initialize session state for tickers if it doesn't exist
+if 'etfs' not in st.session_state:
+    st.session_state.etfs = default_etfs.copy()
 
 # Sidebar for adding new tickers
 st.sidebar.header("Add or Remove Tickers")
@@ -30,23 +34,23 @@ new_ticker = st.sidebar.text_input("Enter a new ETF ticker (e.g., AAPL)")
 
 # Add ticker button
 if st.sidebar.button("Add Ticker"):
-    if new_ticker.upper() not in default_etfs:
-        default_etfs.append(new_ticker.upper())  # Add ticker to the list
+    if new_ticker.upper() not in st.session_state.etfs:
+        st.session_state.etfs.append(new_ticker.upper())  # Add ticker to the session state list
         st.sidebar.success(f"Added {new_ticker.upper()} to the list.")
     else:
         st.sidebar.warning(f"{new_ticker.upper()} is already in the list.")
 
 # Allow the user to remove tickers from the list
-tickers_to_remove = st.sidebar.multiselect("Select tickers to remove", default_etfs)
+tickers_to_remove = st.sidebar.multiselect("Select tickers to remove", st.session_state.etfs)
 
 # Remove selected tickers
 if st.sidebar.button("Remove Selected Tickers"):
     for ticker in tickers_to_remove:
-        default_etfs.remove(ticker)
+        st.session_state.etfs.remove(ticker)
     st.sidebar.success(f"Removed selected tickers: {', '.join(tickers_to_remove)}")
 
-# Re-fetch data and re-run calculations for the updated ticker list
-etfs = default_etfs  # Updated list of tickers
+# Use the session state tickers for analysis
+etfs = st.session_state.etfs  # Updated list of tickers
 z_score_list = []
 current_price_list = []
 skewness_list = []
@@ -65,9 +69,7 @@ for etf in etfs:
         continue
 
     # Calculate mean and standard deviation for the last month
-    # Ensure 'data' is a Series by selecting only the 'Adj Close' column if 'data' is a DataFrame
-    
-    mean_last_month = float (data.mean())
+    mean_last_month = float(data.mean())
     std_last_month = float(data.std())
 
     # Calculate skewness and kurtosis, default to 0 if invalid
@@ -94,8 +96,5 @@ df = pd.DataFrame({
 })
 
 # Fill NaN values and sort by Z-Score
-#df = df.fillna(0)  # Fill NaN values with 0
-
-# Display the table
 df_sorted = df.sort_values(by='Z Score', ascending=True)
 st.table(df_sorted)
