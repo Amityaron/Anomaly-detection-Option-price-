@@ -1,92 +1,85 @@
+# Import necessary libraries
+import streamlit as st
+import yfinance as yf
 import pandas as pd
 import numpy as np
-from datetime import datetime, timedelta
 from scipy.stats import norm
-import yfinance as yf
-import streamlit as st
+from datetime import datetime
 
-# Set the app title 
-st.title('Sell Call Options Strategy') 
-st.write('Sell call options strategy based on the Black-Scholes Model.')
+# Black-Scholes Option Pricing Model
+def black_scholes(S, K, T, r, sigma, option_type="call"):
+    d1 = (np.log(S / K) + (r + 0.5 * sigma ** 2) * T) / (sigma * np.sqrt(T))
+    d2 = d1 - sigma * np.sqrt(T)
+    if option_type == "call":
+        return S * norm.cdf(d1) - K * np.exp(-r * T) * norm.cdf(d2)
+    elif option_type == "put":
+        return K * np.exp(-r * T) * norm.cdf(-d2) - S * norm.cdf(-d1)
 
-# Create a text input for the ticker symbol 
-ticker_symbol = st.text_input('Enter a ticker based on Yahoo Finance:', 'SPY') 
-days_for_volatility = st.number_input('Enter the number of days to estimate volatility:', 60, min_value=1) 
-probability_threshold = st.slider('Select the minimum probability of expiring OTM:', 0.0, 1.0, 0.9)
+# App title and description
+st.title("Options Pricing Model App")
+st.write("This app displays call and put options with their Option Pricing Model (OPM) values. Filter by OPM to see options within a specific range.")
 
-def get_latest_stock_price(ticker_symbol):
-    """Fetch the latest stock price for the given ticker symbol."""
-    ticker = yf.Ticker(ticker_symbol)
-    try:
-        history = ticker.history(period='1d')  # Fetch last day's data
-        if not history.empty:
-            return history['Close'].iloc[-1]
-        else:
-            st.error(f"No historical data available for {ticker_symbol}.")
-            return None
-    except Exception as e:
-        st.error(f"Error fetching data: {e}")
-        return None
+# Sidebar inputs
+ticker = st.sidebar.text_input("Enter a stock ticker (e.g., AAPL)", "AAPL")
+opm_filter = st.sidebar.slider("Filter by OPM", min_value=0.0, max_value=100.0, value=(0.0, 100.0))
 
-def get_options_table(ticker_symbol, expiration_date):
-    """Get the options chain for a specific expiration date."""
-    ticker = yf.Ticker(ticker_symbol)
-    options_chain = ticker.option_chain(expiration_date)
-    calls = options_chain.calls
-    puts = options_chain.puts
+# Function to fetch options data with caching
+@st.cache_data
+def fetch_options_data(ticker):
+    stock = yf.Ticker(ticker)
+    expiration_dates = stock.options
+    return stock, expiration_dates
 
-    calls['expirationDate'] = expiration_date
-    puts['expirationDate'] = expiration_date
-
-    calls['type'] = 'call'
-    puts['type'] = 'put'
-    options_table = pd.concat([calls, puts])
-    
-    return options_table
-
-def calculate_probability_otm(call_options, stock_price, risk_free_rate, days_to_expiration, volatility):
-    """Calculate the probability of options expiring out-of-the-money (OTM)."""
-    call_options['d2'] = (np.log(stock_price / call_options['strike']) + 
-                          (risk_free_rate - 0.5 * volatility ** 2) * days_to_expiration / 365) / (volatility * np.sqrt(days_to_expiration / 365))
-    call_options['probability_otm'] = norm.cdf(-call_options['d2'])
-    return call_options
-
-def filter_options_table(options_table, stock_price, risk_free_rate, volatility):
-    """Filter the options table for call options with the specified probability threshold."""
-    call_options = options_table[options_table['type'] == 'call']
-    call_options['daysToExpiration'] = (pd.to_datetime(call_options['expirationDate']) - pd.to_datetime('today')).dt.days
-    call_options = calculate_probability_otm(call_options, stock_price, risk_free_rate, call_options['daysToExpiration'], volatility)
-    filtered_call_options = call_options[call_options['probability_otm'] >= probability_threshold]
-    return filtered_call_options[['contractSymbol', 'strike', 'lastPrice', 'probability_otm', 'expirationDate']]
-
-def estimate_volatility(ticker_symbol, days):
-    """Estimate the historical volatility based on the stock's past returns."""
-    ticker = yf.Ticker(ticker_symbol)
-    start_date = datetime.now() - timedelta(days=days)
-    hist = ticker.history(start=start_date)
-    if not hist.empty:
-        hist['Return'] = hist['Close'].pct_change().dropna()
-        return hist['Return'].std() * np.sqrt(252)  # Annualized volatility
+try:
+    stock, expiration_dates = fetch_options_data(ticker)
+    if not expiration_dates:
+        st.error("No options data available for this ticker.")
     else:
-        st.error("Not enough historical data to estimate volatility.")
-        return 0.0
+        # Select expiration date
+        exp_date = st.sidebar.selectbox("Select expiration date", expiration_dates)
 
-# Main app logic
-risk_free_rate = 0.04  # 4% annual risk-free rate
-volatility = estimate_volatility(ticker_symbol, days_for_volatility)
-stock_price = get_latest_stock_price(ticker_symbol)
+        # Fetch options chain for the selected expiration date
+        options_chain = stock.option_chain(exp_date)
+        calls = options_chain.calls
+        puts = options_chain.puts
 
-if stock_price is not None:
-    expiration_dates = yf.Ticker(ticker_symbol).options
-    all_filtered_options = pd.DataFrame()
+        # Get stock price and set risk-free rate
+        stock_price = stock.history(period="1d")["Close"].iloc[-1]
+        risk_free_rate = 0.01  # Example risk-free rate
 
-    for expiration_date in expiration_dates[:4]:  # Limit to the next 4 expiration dates
-        options_table = get_options_table(ticker_symbol, expiration_date)
-        filtered_call_options = filter_options_table(options_table, stock_price, risk_free_rate, volatility)
-        filtered_call_options['expiration_date'] = expiration_date
-        all_filtered_options = pd.concat([all_filtered_options, filtered_call_options], ignore_index=True)
+        # Time to expiration
+        T = (datetime.strptime(exp_date, "%Y-%m-%d") - datetime.now()).days / 365
 
-    if not all_filtered_options.empty:
-        st.table(all_filtered_options.sort_values(by='expiration_date', ascending=True))
-    else:
-        st.write("No call options meet the probability criteria.")
+        # Calculate OPM for each option and add to dataframes
+        def calculate_opm(df, option_type):
+            df = df.dropna(subset=['impliedVolatility'])
+            df["OPM"] = df.apply(
+                lambda x: black_scholes(
+                    S=stock_price,
+                    K=x["strike"],
+                    T=T,
+                    r=risk_free_rate,
+                    sigma=x["impliedVolatility"],
+                    option_type=option_type
+                ),
+                axis=1
+            )
+            return df
+
+        # Calculate OPM for calls and puts
+        calls = calculate_opm(calls, "call")
+        puts = calculate_opm(puts, "put")
+
+        # Concatenate calls and puts into a single DataFrame
+        options_df = pd.concat([calls.assign(Type="Call"), puts.assign(Type="Put")])
+
+        # Filter based on OPM range
+        filtered_options = options_df[(options_df["OPM"] >= opm_filter[0]) & (options_df["OPM"] <= opm_filter[1])]
+
+        # Display the filtered options
+        st.write("### Filtered Options Table")
+        st.write(filtered_options[["Type", "strike", "lastPrice", "impliedVolatility", "OPM"]])
+
+except Exception as e:
+    st.error("Could not retrieve data for the provided ticker symbol. Please check the ticker and try again.")
+    st.error(f"Error details: {e}")
