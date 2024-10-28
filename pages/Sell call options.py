@@ -55,7 +55,7 @@ try:
 
         # Get stock price and set risk-free rate
         stock_price = stock.history(period="1d")["Close"].iloc[-1]
-        risk_free_rate = 0.01  # Example risk-free rate
+        risk_free_rate = 0.04  # Example risk-free rate
 
         # Time to expiration
         T = (datetime.strptime(exp_date, "%Y-%m-%d") - datetime.now()).days / 365
