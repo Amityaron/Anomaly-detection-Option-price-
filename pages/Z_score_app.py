@@ -20,7 +20,7 @@ st.markdown("""
 """)
 
 # Default ETF tickers
-default_etfs = ["SPY", "XLK", "SOXX", "XLF", "BTC-USD", "URTH", "IXN", "QQQ"]
+default_etfs = ["QQQ", "SPY", "XLK", "SOXX", "XLF", "BTC-USD", "URTH", "IXN"]
 
 # Initialize session state for tickers if it doesn't exist
 if 'etfs' not in st.session_state:
@@ -35,7 +35,7 @@ new_ticker = st.sidebar.text_input("Enter a new ETF ticker (e.g., AAPL)")
 # Add ticker button
 if st.sidebar.button("Add Ticker"):
     if new_ticker.upper() not in st.session_state.etfs:
-        st.session_state.etfs.append(new_ticker.upper())  # Add ticker to the session state list
+        st.session_state.etfs.append(new_ticker.upper())
         st.sidebar.success(f"Added {new_ticker.upper()} to the list.")
     else:
         st.sidebar.warning(f"{new_ticker.upper()} is already in the list.")
@@ -50,50 +50,38 @@ if st.sidebar.button("Remove Selected Tickers"):
     st.sidebar.success(f"Removed selected tickers: {', '.join(tickers_to_remove)}")
 
 # Use the session state tickers for analysis
-etfs = st.session_state.etfs  # Updated list of tickers
-z_score_list = []
-current_price_list = []
-skewness_list = []
-kurtosis_list = []
+etfs = st.session_state.etfs
+results = []
 
 # Loop through each ETF ticker and calculate Z-score, skewness, kurtosis
 for etf in etfs:
-    # Get historical data for the last month
     end_date = pd.Timestamp.now()
-    start_date = end_date - pd.DateOffset(days=22)  # Last month's data
+    start_date = end_date - pd.DateOffset(days=22)
     data = yf.download(etf, start=start_date, end=end_date)["Adj Close"].dropna()
 
-    # Ensure we have sufficient data before proceeding
     if data.empty:
         st.warning(f"No data for {etf}. Skipping.")
         continue
 
-    # Calculate mean and standard deviation for the last month
     mean_last_month = float(data.mean())
     std_last_month = float(data.std())
 
-    # Calculate skewness and kurtosis, default to 0 if invalid
     skewness_last_month = round(float(skew(data)), 2) if len(data) > 1 else 0
     kurtosis_last_month = round(float(kurtosis(data)), 2) if len(data) > 1 else 0
-    skewness_list.append(skewness_last_month)
-    kurtosis_list.append(kurtosis_last_month)
-
-    # Get the most recent data point (current price)
     current_price = float(data.iloc[-1])
-    current_price_list.append(round(current_price, 2))
 
-    # Calculate Z score for the current price
     z_score_current_price = round((current_price - mean_last_month) / std_last_month, 2) if std_last_month != 0 else 0
-    z_score_list.append(z_score_current_price)
+
+    results.append({
+        "ETF Symbol": etf,
+        "Current Price": round(current_price, 2),
+        "Z Score": z_score_current_price,
+        "Skewness": skewness_last_month,
+        "Kurtosis": kurtosis_last_month
+    })
 
 # Create DataFrame to display the results
-df = pd.DataFrame({
-    "ETF Symbol": etfs,
-    "Current Price": current_price_list,
-    "Z Score": z_score_list,
-    "Skewness": skewness_list,
-    "Kurtosis": kurtosis_list
-})
+df = pd.DataFrame(results)
 
 # Fill NaN values and sort by Z-Score
 df_sorted = df.sort_values(by='Z Score', ascending=True)
