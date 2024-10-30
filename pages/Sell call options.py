@@ -48,58 +48,62 @@ try:
         exp_date = st.sidebar.selectbox("Select expiration date", expiration_dates)
 
         # Fetch options chain for the selected expiration date
-        stock = yf.Ticker(ticker)  # Get the non-cached stock object to fetch options chain
+        stock = yf.Ticker(ticker)
         options_chain = stock.option_chain(exp_date)
         calls = options_chain.calls
         puts = options_chain.puts
 
         # Get stock price and set risk-free rate
-        stock_price = stock.history(period="1d")["Close"].iloc[-1]
-        risk_free_rate = 0.04  # Example risk-free rate
+        history = stock.history(period="1d")
+        if history.empty:
+            st.error("No historical data available for this ticker.")
+        else:
+            stock_price = history["Close"].iloc[-1]
+            risk_free_rate = 0.04  # Example risk-free rate
 
-        # Time to expiration
-        T = (datetime.strptime(exp_date, "%Y-%m-%d") - datetime.now()).days / 365
+            # Time to expiration
+            T = (datetime.strptime(exp_date, "%Y-%m-%d") - datetime.now()).days / 365
 
-        # Calculate OPM and probability of expiring OTM for each option
-        def calculate_opm_and_otm_prob(df, option_type):
-            df = df.dropna(subset=['impliedVolatility'])
-            df["OPM"] = df.apply(
-                lambda x: black_scholes(
-                    S=stock_price,
-                    K=x["strike"],
-                    T=T,
-                    r=risk_free_rate,
-                    sigma=x["impliedVolatility"],
-                    option_type=option_type
-                ),
-                axis=1
-            )
-            df["P(OTM)"] = df.apply(
-                lambda x: probability_otm(
-                    S=stock_price,
-                    K=x["strike"],
-                    T=T,
-                    r=risk_free_rate,
-                    sigma=x["impliedVolatility"],
-                    option_type=option_type
-                ),
-                axis=1
-            )
-            return df
+            # Calculate OPM and probability of expiring OTM for each option
+            def calculate_opm_and_otm_prob(df, option_type):
+                df = df.dropna(subset=['impliedVolatility'])
+                df["OPM"] = df.apply(
+                    lambda x: black_scholes(
+                        S=stock_price,
+                        K=x["strike"],
+                        T=T,
+                        r=risk_free_rate,
+                        sigma=x["impliedVolatility"],
+                        option_type=option_type
+                    ),
+                    axis=1
+                )
+                df["P(OTM)"] = df.apply(
+                    lambda x: probability_otm(
+                        S=stock_price,
+                        K=x["strike"],
+                        T=T,
+                        r=risk_free_rate,
+                        sigma=x["impliedVolatility"],
+                        option_type=option_type
+                    ),
+                    axis=1
+                )
+                return df
 
-        # Calculate OPM and P(OTM) for calls and puts
-        calls = calculate_opm_and_otm_prob(calls, "call")
-        puts = calculate_opm_and_otm_prob(puts, "put")
+            # Calculate OPM and P(OTM) for calls and puts
+            calls = calculate_opm_and_otm_prob(calls, "call")
+            puts = calculate_opm_and_otm_prob(puts, "put")
 
-        # Concatenate calls and puts into a single DataFrame
-        options_df = pd.concat([calls.assign(Type="Sell Call"), puts.assign(Type="Sell Put")])
+            # Concatenate calls and puts into a single DataFrame
+            options_df = pd.concat([calls.assign(Type="Sell Call"), puts.assign(Type="Sell Put")])
 
-        # Filter based on Probability of Expiring OTM range
-        filtered_options = options_df[(options_df["P(OTM)"] >= otm_prob_filter[0]) & (options_df["P(OTM)"] <= otm_prob_filter[1])]
+            # Filter based on Probability of Expiring OTM range
+            filtered_options = options_df[(options_df["P(OTM)"] >= otm_prob_filter[0]) & (options_df["P(OTM)"] <= otm_prob_filter[1])]
 
-        # Display the filtered options
-        st.write("### Filtered Options for Selling")
-        st.write(filtered_options[["Type", "strike", "lastPrice", "impliedVolatility", "OPM", "P(OTM)"]])
+            # Display the filtered options
+            st.write("### Filtered Options for Selling")
+            st.write(filtered_options[["Type", "strike", "lastPrice", "impliedVolatility", "OPM", "P(OTM)"]])
 
 except Exception as e:
     st.error("Could not retrieve data for the provided ticker symbol. Please check the ticker and try again.")
