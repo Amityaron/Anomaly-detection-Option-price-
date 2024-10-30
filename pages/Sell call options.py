@@ -29,7 +29,7 @@ st.title("Options Selling Model App with Probability of Expiring OTM")
 st.write("This app displays sell put and call options with their Option Pricing Model (OPM) values and the probability of expiring OTM by expiration. Filter by the probability of expiring OTM.")
 
 # Sidebar inputs
-ticker = st.sidebar.text_input("Enter a stock ticker (e.g., AAPL)", "AAPL")
+ticker = st.sidebar.text_input("Enter a stock ticker (e.g., SPY)", "SPY")
 otm_prob_filter = st.sidebar.slider("Filter by Probability of Expiring OTM", min_value=0.0, max_value=1.0, value=(0.0, 1.0))
 
 # Function to fetch options data (expiration dates only, to be cacheable)
