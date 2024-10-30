@@ -23,8 +23,8 @@ st.markdown("""
 default_etfs = ["QQQ", "SPY", "XLK", "SOXX", "XLF", "BTC-USD", "URTH", "IXN"]
 
 # Initialize session state for tickers if it doesn't exist
-if 'etfs' not in st.session_state:
-    st.session_state.etfs = default_etfs.copy()
+#if 'etfs' not in st.session_state:
+st.session_state.etfs = default_etfs.copy()
 
 # Sidebar for adding new tickers
 st.sidebar.header("Add or Remove Tickers")
