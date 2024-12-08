@@ -20,7 +20,7 @@ st.markdown("""
 """)
 
 # Default ETF tickers
-default_etfs = ["CNDX.L","IVV","IVW","XLK", "SOXX", "XLF", "BTC-USD", "URTH", "IXN"]
+default_etfs = ["CNDX.L","IVV","IVW","XLK", "SOXX", "XLF", "BTC-USD", "URTH", "IXN","IAU","SMH"]
 
 # Initialize session state for tickers if it doesn't exist
 if 'etfs' not in st.session_state:
