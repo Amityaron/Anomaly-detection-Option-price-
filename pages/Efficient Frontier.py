@@ -1,94 +1,97 @@
-# Import necessary libraries
-import pandas as pd
-import numpy as np
-import datetime
-import matplotlib.pyplot as plt
 import yfinance as yf
-from scipy.stats import skew, kurtosis
+import numpy as np
+import pandas as pd
 import streamlit as st
+import matplotlib.pyplot as plt
 
-# Set the app title 
-st.title('Welcome to my Anomaly Detection App')
-st.title('Based on Z-Score') 
+# Streamlit setup
+st.title("Efficient Frontier Portfolio Optimization")
 
+# Input for tickers
+st.sidebar.header("Portfolio Settings")
+default_tickers = "IAU, XLK, XLF, IVV, IVW, SMH, SOXX, XWD.TO, BTC-USD, IXN, XLD.TO"
+ticker_input = st.sidebar.text_area("Enter tickers separated by commas:", default_tickers)
+tickers = [ticker.strip() for ticker in ticker_input.split(",") if ticker.strip()]
 
-# Skewness Explanation
-st.markdown("""
-    ### Skewness Definitions:
-    - Highly positively skewed: Skewness > 1
-    - Moderately positively skewed: 0.5 < Skewness ≤ 1
-    - Approximately symmetric: -0.5 ≤ Skewness ≤ 0.5
-    - Moderately negatively skewed: -1 ≤ Skewness < -0.5
-    - Highly negatively skewed: Skewness < -1
-""")
+# Check if tickers are provided
+if not tickers:
+    st.error("Please enter at least one ticker.")
+    st.stop()
 
-# Default ETF tickers
-default_etfs = ["CNDX.L","CSPX.L", "IUIT.L","IUFS.L","IWRD.L","ISEU.L","IBIT","BTC-USD","XLK","SOXX","IVW","IETC","IXN","URTH","ACWI"]
+# Download historical data
+try:
+    data = yf.download(tickers, start="2000-01-01", end="2024-12-05")["Adj Close"]
+except Exception as e:
+    st.error(f"Error downloading data: {e}")
+    st.stop()
 
+# Calculate daily returns
+returns = data.pct_change().dropna()
 
-# Sidebar for adding new tickers
-st.sidebar.header("Add or Remove Tickers")
+# Calculate annualized mean returns and covariance matrix
+annual_returns = returns.mean() * 252  # 252 trading days
+cov_matrix = returns.cov() * 252
 
-# Add new ticker input
-new_ticker = st.sidebar.text_input("Enter a new ETF ticker (e.g., AAPL)")
+# Portfolio simulation
+num_portfolios = 100000
+results = np.zeros((3, num_portfolios))
+weights_record = []
 
-# Add ticker button
-if st.sidebar.button("Add Ticker"):
-    if new_ticker.upper() not in default_etfs:
-        default_etfs.append(new_ticker.upper())  # Add ticker to the list
-        st.sidebar.success(f"Added {new_ticker.upper()} to the list.")
-    else:
-        st.sidebar.warning(f"{new_ticker.upper()} is already in the list.")
+# Risk-free rate for Sharpe ratio calculation
+risk_free_rate = 0.05
 
-# Allow the user to remove tickers from the list
-tickers_to_remove = st.sidebar.multiselect("Select tickers to remove", default_etfs)
+for i in range(num_portfolios):
+    # Generate random weights
+    weights = np.random.random(len(tickers))
+    weights /= np.sum(weights)
+    weights_record.append(weights)
 
-# Remove selected tickers
-if st.sidebar.button("Remove Selected Tickers"):
-    for ticker in tickers_to_remove:
-        default_etfs.remove(ticker)
-    st.sidebar.success(f"Removed selected tickers: {', '.join(tickers_to_remove)}")
+    # Expected portfolio return
+    portfolio_return = np.dot(weights, annual_returns)
 
-# Re-fetch data and re-run calculations for the updated ticker list
-etfs = default_etfs  # Updated list of tickers
-z_score_list = []
-current_price_list = []
-skewness_list = []
-kurtosis_list = []
+    # Expected portfolio volatility
+    portfolio_volatility = np.sqrt(np.dot(weights.T, np.dot(cov_matrix, weights)))
 
-# Loop through each ETF ticker and calculate Z-score, skewness, kurtosis
-for etf in etfs:
-    # Get historical data for the last month
-    end_date = pd.Timestamp.now()
-    start_date = end_date - pd.DateOffset(days=22)  # Last month's data
-    data = yf.download(etf, start=start_date, end=end_date)["Adj Close"]
+    # Sharpe ratio
+    sharpe_ratio = (portfolio_return - risk_free_rate) / portfolio_volatility
 
-    # Calculate mean and standard deviation for the last month
-    mean_last_month = data.mean()
-    std_last_month = data.std()
+    # Store results
+    results[0, i] = portfolio_volatility
+    results[1, i] = portfolio_return
+    results[2, i] = sharpe_ratio
 
-    # Calculate skewness and kurtosis for the last month
-    skewness_last_month = skew(data)
-    kurtosis_last_month = kurtosis(data)
-    skewness_list.append(round(skewness_last_month, 2))
-    kurtosis_list.append(round(kurtosis_last_month, 2))
+# Convert results to DataFrame
+results_df = pd.DataFrame(results.T, columns=["Volatility", "Return", "Sharpe Ratio"])
+weights_df = pd.DataFrame(weights_record, columns=tickers)
 
-    # Get the most recent data point (current price)
-    current_price = data.iloc[-1]
-    current_price_list.append(round(current_price, 2))
+# Find the portfolio with the maximum Sharpe Ratio
+max_sharpe_idx = results_df["Sharpe Ratio"].idxmax()
+max_sharpe_portfolio = results_df.iloc[max_sharpe_idx]
+max_sharpe_weights = weights_df.iloc[max_sharpe_idx]
 
-    # Calculate Z score for the current price
-    z_score_current_price = round((current_price - mean_last_month) / std_last_month, 2)
-    z_score_list.append(z_score_current_price)
+# Find the portfolio with the minimum volatility
+min_vol_idx = results_df["Volatility"].idxmin()
+min_vol_portfolio = results_df.iloc[min_vol_idx]
+min_vol_weights = weights_df.iloc[min_vol_idx]
 
-# Create DataFrame to display the results
-df = pd.DataFrame({
-    "ETF Symbol": etfs,
-    "Current Price": current_price_list,
-    "Z Score": z_score_list,
-    "Skewness": skewness_list,
-    "Kurtosis": kurtosis_list
-})
+# Plot the Efficient Frontier
+st.subheader("Efficient Frontier")
+plt.figure(figsize=(10, 7))
+plt.scatter(results_df["Volatility"], results_df["Return"], c=results_df["Sharpe Ratio"], cmap="viridis", alpha=0.7)
+plt.colorbar(label="Sharpe Ratio")
+plt.scatter(max_sharpe_portfolio[0], max_sharpe_portfolio[1], c="red", marker="*", s=200, label="Max Sharpe Ratio")
+plt.scatter(min_vol_portfolio[0], min_vol_portfolio[1], c="blue", marker="*", s=200, label="Min Volatility")
+plt.title("Efficient Frontier")
+plt.xlabel("Volatility (Standard Deviation)")
+plt.ylabel("Expected Return")
+plt.legend()
+st.pyplot(plt)
 
-# Display the table sorted by Z-Score
-st.table(df.sort_values(by='Z Score', ascending=True))
+# Display key portfolios
+st.subheader("Portfolio with Maximum Sharpe Ratio")
+st.write(f"Return: {max_sharpe_portfolio['Return']*100:.2f}%, Volatility: {max_sharpe_portfolio['Volatility']*100:.2f}%, Sharpe Ratio: {max_sharpe_portfolio['Sharpe Ratio']:.2f}")
+st.write(max_sharpe_weights * 100)
+
+st.subheader("Portfolio with Minimum Volatility")
+st.write(f"Return: {min_vol_portfolio['Return']*100:.2f}%, Volatility: {min_vol_portfolio['Volatility']*100:.2f}%, Sharpe Ratio: {min_vol_portfolio['Sharpe Ratio']:.2f}")
+st.write(min_vol_weights * 100)
