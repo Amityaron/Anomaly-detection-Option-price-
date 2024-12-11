@@ -11,7 +11,7 @@ st.title("Efficient Frontier Portfolio Optimization")
 st.sidebar.header("Portfolio Settings")
 default_tickers = "IAU,XLK,XLF,IVV,IVW,SMH,SOXX,BTC-USD,IXN,URTH"
 ticker_input = st.sidebar.text_area("Enter tickers separated by commas:", default_tickers)
-tickers = [ticker.strip() for ticker_input in ticker_input.split(",") if ticker.strip()]
+tickers = [ticker.strip() for ticker in ticker_input.split(",") if ticker.strip()]
 
 # Check if tickers are provided
 if not tickers:
