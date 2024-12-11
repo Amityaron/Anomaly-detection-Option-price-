@@ -11,7 +11,7 @@ st.title("Efficient Frontier Portfolio Optimization")
 st.sidebar.header("Portfolio Settings")
 default_tickers = "IAU, XLK, XLF, IVV, IVW, SMH, SOXX, XWD.TO, BTC-USD, IXN, URTH"
 ticker_input = st.sidebar.text_area("Enter tickers separated by commas:", default_tickers)
-tickers = [ticker.strip() for ticker in ticker_input.split(",") if ticker.strip()]
+tickers = [ticker.strip() for ticker_input in ticker_input.split(",") if ticker.strip()]
 
 # Check if tickers are provided
 if not tickers:
@@ -69,10 +69,16 @@ max_sharpe_idx = results_df["Sharpe Ratio"].idxmax()
 max_sharpe_portfolio = results_df.iloc[max_sharpe_idx]
 max_sharpe_weights = weights_df.iloc[max_sharpe_idx]
 
+# Sort weights by magnitude for maximum Sharpe Ratio portfolio
+max_sharpe_weights_sorted = max_sharpe_weights.sort_values(ascending=False)
+
 # Find the portfolio with the minimum volatility
 min_vol_idx = results_df["Volatility"].idxmin()
 min_vol_portfolio = results_df.iloc[min_vol_idx]
 min_vol_weights = weights_df.iloc[min_vol_idx]
+
+# Sort weights by magnitude for minimum volatility portfolio
+min_vol_weights_sorted = min_vol_weights.sort_values(ascending=False)
 
 # Plot the Efficient Frontier
 st.subheader("Efficient Frontier")
@@ -90,8 +96,8 @@ st.pyplot(plt)
 # Display key portfolios
 st.subheader("Portfolio with Maximum Sharpe Ratio")
 st.write(f"Return: {max_sharpe_portfolio['Return']*100:.2f}%, Volatility: {max_sharpe_portfolio['Volatility']*100:.2f}%, Sharpe Ratio: {max_sharpe_portfolio['Sharpe Ratio']:.2f}")
-st.write(max_sharpe_weights * 100)
+st.write(max_sharpe_weights_sorted * 100)
 
 st.subheader("Portfolio with Minimum Volatility")
 st.write(f"Return: {min_vol_portfolio['Return']*100:.2f}%, Volatility: {min_vol_portfolio['Volatility']*100:.2f}%, Sharpe Ratio: {min_vol_portfolio['Sharpe Ratio']:.2f}")
-st.write(min_vol_weights * 100)
+st.write(min_vol_weights_sorted * 100)
