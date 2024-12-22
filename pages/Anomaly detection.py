@@ -83,8 +83,6 @@ st.write("Current price:", round(spy.iloc[-1]['Close'], 2))
 st.table(df.round(2))
 
 
-st.write("Available columns:", sp500_data.columns)
-
 # Monthly Percentage Changes
 import pandas as pd
 import yfinance as yf
@@ -105,6 +103,7 @@ sp500_data = yf.download(symbol, start=start_date_sp500, end=end_date_sp500)
 # Ensure the data is sorted by date
 sp500_data.sort_index(inplace=True)
 
+st.write("Available columns:", sp500_data.columns)
 # Calculate daily and monthly returns
 sp500_data['Daily Return'] = sp500_data['Adj Close'].pct_change()
 monthly_returns = sp500_data['Adj Close'].resample('M').ffill().pct_change() * 100
