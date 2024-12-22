@@ -82,6 +82,9 @@ df = pd.DataFrame({'Buy_Signal_Date': lower_dates, 'Buy Price': buy_prices, 'Gai
 st.write("Current price:", round(spy.iloc[-1]['Close'], 2))
 st.table(df.round(2))
 
+
+st.write("Available columns:", sp500_data.columns)
+
 # Monthly Percentage Changes
 import pandas as pd
 import yfinance as yf
