@@ -20,7 +20,7 @@ if not tickers:
 
 # Download historical data
 try:
-    data = yf.download(tickers, start="2000-01-01", end="2024-12-05")["Adj Close"]
+    data = yf.download(tickers, start="2000-01-01", end="2024-12-05")["Close"]
 except Exception as e:
     st.error(f"Error downloading data: {e}")
     st.stop()
