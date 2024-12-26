@@ -57,7 +57,7 @@ results = []
 for etf in etfs:
     end_date = pd.Timestamp.now()
     start_date = end_date - pd.DateOffset(days=22)
-    data = yf.download(etf, start=start_date, end=end_date)["Adj Close"].dropna()
+    data = yf.download(etf, start=start_date, end=end_date)["Close"].dropna()
 
     if data.empty:
         st.warning(f"No data for {etf}. Skipping.")
