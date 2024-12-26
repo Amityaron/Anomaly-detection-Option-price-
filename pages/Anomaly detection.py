@@ -106,7 +106,7 @@ sp500_data.sort_index(inplace=True)
 #st.write("Available columns:", sp500_data.columns)
 # Calculate daily and monthly returns
 sp500_data['Daily Return'] = sp500_data['Close'].pct_change()
-monthly_returns = sp500_data['Adj Close'].resample('M').ffill().pct_change() * 100
+monthly_returns = sp500_data['Close'].resample('M').ffill().pct_change() * 100
 
 # Verify and convert `monthly_returns` to a Series if needed
 if isinstance(monthly_returns, pd.DataFrame):
