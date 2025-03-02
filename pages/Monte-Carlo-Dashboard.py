@@ -79,7 +79,7 @@ if stock_ticker:
             # Sidebar sliders for other parameters
             K = st.sidebar.slider('Strike Price (K)', min_value=int(S0 * 0.5), max_value=int(S0 * 2), value=int(S0 * 1.1))
             r = st.sidebar.slider('Risk-Free Rate (r)', min_value=0.0, max_value=0.1, value=0.05, step=0.01)
-            sigma = st.sidebar.slider('Volatility (σ)', min_value=0.1, max_value=1.0, value=0.2, step=0.01)
+            sigma = st.sidebar.slider('Volatility (σ)', min_value=0.05, max_value=1.0, value=0.2, step=0.01)
             T = st.sidebar.slider('Time to Maturity (T) Years', min_value=0.05, max_value=5.0, value=1.0, step=0.1)
             N = st.sidebar.slider('Number of Simulations (N)', min_value=10, max_value=1000, value=100)
 
