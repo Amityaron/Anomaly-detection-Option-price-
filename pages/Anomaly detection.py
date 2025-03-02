@@ -75,7 +75,8 @@ ax.plot(spy.loc[spy['Signal'] == 1, 'Close'], 'o', markersize=10, label='Buy Sig
 ax.plot(spy.loc[spy['Sell_Signal'] == 1, 'Close'], 'x', markersize=10, label='Sell Signal')
 plt.axhline(y=spy.iloc[-1]['Close'], color='r', linestyle='--')
 ax.legend()
-st.pyplot(fig)
+# st.pyplot(fig)
+st.line_chart(fig)
 
 # Display Buy Signal Dates, Buy Prices, and Gain Percentages
 df = pd.DataFrame({'Buy_Signal_Date': lower_dates, 'Buy Price': buy_prices, 'Gain_Pct': pct_change})
