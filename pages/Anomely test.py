@@ -3,7 +3,8 @@ import numpy as np
 import yfinance as yf
 import seaborn as sns
 import streamlit as st
-import plotly.graph_objects as go
+import matplotlib.pyplot as plt
+import mplcursors
 
 # Set the app title 
 st.title('Anomaly Detection Stock Market App')
@@ -62,49 +63,33 @@ for index, row in spy.loc[spy['Signal'] == 1].iterrows():
 
 pct_change = [((spy.iloc[-1]['Close'] / x) - 1) * 100 for x in buy_prices]
 
-# Plot the data and signals using Plotly
+# Plot the data and signals using Matplotlib
 title = f"{symbol} ({start_date} to {end_date})"
-fig = go.Figure()
+fig, ax = plt.subplots(figsize=(12, 6))
+ax.plot(spy['Close'], label='Close')
+ax.plot(spy['SMA'], label='SMA')
+ax.plot(spy['Upper'], label='Upper Band')
+ax.plot(spy['Lower'], label='Lower Band')
+ax.plot(spy.loc[spy['Signal'] == 1, 'Close'], 'o', markersize=10, label='Buy Signal')
+ax.plot(spy.loc[spy['Sell_Signal'] == 1, 'Close'], 'x', markersize=10, label='Sell Signal')
+plt.axhline(y=spy.iloc[-1]['Close'], color='r', linestyle='--')
+ax.legend()
 
-# Plot Close, SMA, Upper and Lower bands
-fig.add_trace(go.Scatter(x=spy.index, y=spy['Close'], mode='lines', name='Close'))
-fig.add_trace(go.Scatter(x=spy.index, y=spy['SMA'], mode='lines', name='SMA'))
-fig.add_trace(go.Scatter(x=spy.index, y=spy['Upper'], mode='lines', name='Upper Band'))
-fig.add_trace(go.Scatter(x=spy.index, y=spy['Lower'], mode='lines', name='Lower Band'))
+# Enable interactivity with mplcursors
+mplcursors.cursor(hover=True)
 
-# Plot Buy signals
-fig.add_trace(go.Scatter(x=spy.loc[spy['Signal'] == 1].index, 
-                         y=spy.loc[spy['Signal'] == 1]['Close'], 
-                         mode='markers', 
-                         marker=dict(symbol='circle', size=10, color='green'),
-                         name='Buy Signal'))
+# Add title and labels
+plt.title(title)
+ax.set_xlabel('Date')
+ax.set_ylabel('Price')
 
-# Plot Sell signals
-fig.add_trace(go.Scatter(x=spy.loc[spy['Sell_Signal'] == 1].index, 
-                         y=spy.loc[spy['Sell_Signal'] == 1]['Close'], 
-                         mode='markers', 
-                         marker=dict(symbol='x', size=10, color='red'),
-                         name='Sell Signal'))
-
-# Add a horizontal line at the current closing price
-fig.add_trace(go.Scatter(x=[spy.index[0], spy.index[-1]], 
-                         y=[spy.iloc[-1]['Close'], spy.iloc[-1]['Close']], 
-                         mode='lines', 
-                         line=dict(dash='dash', color='red'),
-                         name='Current Price'))
-
-# Update layout
-fig.update_layout(title=title, xaxis_title='Date', yaxis_title='Price', 
-                  template='plotly_dark', showlegend=True)
-
-# Display the plot
-st.plotly_chart(fig)
+# Display the interactive plot
+st.pyplot(fig)
 
 # Display Buy Signal Dates, Buy Prices, and Gain Percentages
 df = pd.DataFrame({'Buy_Signal_Date': lower_dates, 'Buy Price': buy_prices, 'Gain_Pct': pct_change})
 st.write("Current price:", round(spy.iloc[-1]['Close'], 2))
 st.table(df.round(2))
-
 
 # Monthly Percentage Changes
 st.subheader('Monthly Percentage Changes')
@@ -142,32 +127,24 @@ else:
     last_year = monthly_returns_df[monthly_returns_df['Year'] == monthly_returns_df['Year'].max()]
     last_year_returns = last_year.set_index('Month Name')['Monthly Return']
 
-    # Plotting Monthly Returns using Plotly
-    fig = go.Figure()
+    # Plotting Monthly Returns using Matplotlib
+    fig, ax = plt.subplots(figsize=(15, 8))
+    sns.boxplot(x='Month Name', y='Monthly Return', data=monthly_returns_df,
+                order=['January', 'February', 'March', 'April', 'May', 'June', 
+                       'July', 'August', 'September', 'October', 'November', 'December'], ax=ax)
+    ax.scatter(last_year_returns.index, last_year_returns.values, color='red', zorder=5, label='Last Year Returns')
+    ax.set_xticklabels(ax.get_xticklabels(), rotation=90)
+    ax.set_title(f'Monthly Percentage Changes for {symbol}')
+    ax.set_xlabel('Month')
+    ax.set_ylabel('Percentage Change')
+    ax.grid(True)
+    ax.axhline(y=0, color='r', linestyle='--')
+    ax.legend()
 
-    # Box plot for Monthly Returns
-    fig.add_trace(go.Box(y=monthly_returns_df['Monthly Return'], 
-                         x=monthly_returns_df['Month Name'], 
-                         boxmean='sd', 
-                         name='Monthly Return', 
-                         marker_color='skyblue'))
+    # Enable interactivity with mplcursors
+    mplcursors.cursor(hover=True)
 
-    # Plot last year returns
-    fig.add_trace(go.Scatter(x=last_year_returns.index, 
-                             y=last_year_returns.values, 
-                             mode='markers', 
-                             marker=dict(symbol='circle', size=12, color='red'),
-                             name='Last Year Returns'))
-
-    # Update layout
-    fig.update_layout(title=f'Monthly Percentage Changes for {symbol}', 
-                      xaxis_title='Month', 
-                      yaxis_title='Percentage Change',
-                      xaxis_tickangle=-45, 
-                      template='plotly_dark', showlegend=True)
-
-    # Display the plot
-    st.plotly_chart(fig)
-
+    # Display the plot and additional information
+    st.pyplot(fig)
     st.write(f'Monthly Percentage Changes for {symbol}')
     st.write(f'Data from {start_date_sp500} until {end_date_sp500}')
