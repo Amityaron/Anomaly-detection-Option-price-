@@ -7,6 +7,4 @@ seaborn
 scipy
 BayesianOptimization 
 bayesian-optimization
-go
-plotly
-mplcursors
+
