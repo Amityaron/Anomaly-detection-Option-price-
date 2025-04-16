@@ -2,6 +2,8 @@ import streamlit as st
 import pandas as pd
 import yfinance as yf
 import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 st.set_page_config(page_title="Large-Cap Stock Fundamentals", layout="wide")
 
@@ -71,7 +73,7 @@ def fetch_fundamentals(ticker):
         return {
             "Ticker": ticker.upper(),
             "Sector": sector,
-            "Market Cap": format_market_cap(market_cap),
+            "Market Cap": market_cap,
             "P/E": pe if pe is not None else np.nan,
             "P/B": pb if pb is not None else np.nan,
             "Debt/Equity": debt_equity if debt_equity is not None else np.nan,
@@ -128,4 +130,23 @@ else:
         if col in full_df.columns:
             full_df[col] = pd.to_numeric(full_df[col], errors='coerce').round(2)
 
+    full_df["Market Cap ($B)"] = full_df["Market Cap"] / 1e9
+    full_df.drop(columns="Market Cap", inplace=True)
+
     st.dataframe(full_df, use_container_width=True)
+
+    # 📊 Bar Plot by Sector
+    st.subheader("📉 Market Cap by Sector")
+    sectors = full_df["Sector"].unique()
+
+    for sector in sectors:
+        sector_df = full_df[full_df["Sector"] == sector]
+        avg_cap = sector_df["Market Cap ($B)"].mean()
+
+        fig, ax = plt.subplots(figsize=(10, 4))
+        sns.barplot(data=sector_df, x="Ticker", y="Market Cap ($B)", ax=ax, color='skyblue')
+        ax.axhline(avg_cap, color='red', linestyle='--', label=f"Sector Avg: {avg_cap:.2f}B")
+        ax.set_title(f"{sector} - Market Cap by Ticker")
+        ax.set_ylabel("Market Cap (Billions)")
+        ax.legend()
+        st.pyplot(fig)
