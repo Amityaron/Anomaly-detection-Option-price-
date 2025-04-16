@@ -130,7 +130,9 @@ else:
         if col in full_df.columns:
             full_df[col] = pd.to_numeric(full_df[col], errors='coerce').round(2)
 
-    full_df["Market Cap ($B)"] = full_df["Market Cap"] / 1e9
+    # Fix for Market Cap conversion
+    full_df["Market Cap"] = pd.to_numeric(full_df["Market Cap"], errors="coerce")
+    full_df["Market Cap ($B)"] = (full_df["Market Cap"] / 1e9).round(2)
     full_df.drop(columns="Market Cap", inplace=True)
 
     st.dataframe(full_df, use_container_width=True)
