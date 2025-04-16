@@ -29,7 +29,17 @@ large_cap_stocks = {
     "Procter & Gamble (PG)": "PG",
     "Mastercard (MA)": "MA",
     "Home Depot (HD)": "HD",
-    "Exxon Mobil (XOM)": "XOM"
+    "Exxon Mobil (XOM)": "XOM",
+    "Costco (COST)": "COST",
+    "PepsiCo (PEP)": "PEP",
+    "AbbVie (ABBV)": "ABBV",
+    "Coca-Cola (KO)": "KO",
+    "Pfizer (PFE)": "PFE",
+    "Chevron (CVX)": "CVX",
+    "Intel (INTC)": "INTC",
+    "Cisco (CSCO)": "CSCO",
+    "Walmart (WMT)": "WMT",
+    "Adobe (ADBE)": "ADBE"
 }
 
 def format_market_cap(value):
@@ -130,25 +140,28 @@ else:
         if col in full_df.columns:
             full_df[col] = pd.to_numeric(full_df[col], errors='coerce').round(2)
 
-    # Fix for Market Cap conversion
     full_df["Market Cap"] = pd.to_numeric(full_df["Market Cap"], errors="coerce")
     full_df["Market Cap ($B)"] = (full_df["Market Cap"] / 1e9).round(2)
     full_df.drop(columns="Market Cap", inplace=True)
 
     st.dataframe(full_df, use_container_width=True)
 
-    # 📊 Bar Plot by Sector
+    # 📊 Bar Plot by Sector - show all stocks in one plot grouped by sector
     st.subheader("📉 Market Cap by Sector")
-    sectors = full_df["Sector"].unique()
+    fig, ax = plt.subplots(figsize=(16, 8))
+    sorted_df = full_df.sort_values("Sector")
+    sns.barplot(data=sorted_df, x="Ticker", y="Market Cap ($B)", hue="Sector", dodge=False, ax=ax)
 
-    for sector in sectors:
-        sector_df = full_df[full_df["Sector"] == sector]
-        avg_cap = sector_df["Market Cap ($B)"].mean()
+    # Red average line per sector
+    for sector in sorted_df["Sector"].unique():
+        sector_avg = sorted_df[sorted_df["Sector"] == sector]["Market Cap ($B)"].mean()
+        sector_tickers = sorted_df[sorted_df["Sector"] == sector]["Ticker"].values
+        sector_xs = [sorted_df.index.get_loc(i) for i in sorted_df[sorted_df["Sector"] == sector].index]
+        ax.hlines(sector_avg, xmin=min(sector_xs)-0.4, xmax=max(sector_xs)+0.4, color="red", linestyle="--")
 
-        fig, ax = plt.subplots(figsize=(10, 4))
-        sns.barplot(data=sector_df, x="Ticker", y="Market Cap ($B)", ax=ax, color='skyblue')
-        ax.axhline(avg_cap, color='red', linestyle='--', label=f"Sector Avg: {avg_cap:.2f}B")
-        ax.set_title(f"{sector} - Market Cap by Ticker")
-        ax.set_ylabel("Market Cap (Billions)")
-        ax.legend()
-        st.pyplot(fig)
+    ax.set_title("Market Cap by Ticker (Grouped by Sector)", fontsize=14)
+    ax.set_ylabel("Market Cap (Billions)")
+    ax.set_xlabel("")
+    ax.tick_params(axis='x', rotation=90)
+    ax.legend(loc='upper right')
+    st.pyplot(fig)
