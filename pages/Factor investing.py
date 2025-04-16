@@ -30,6 +30,18 @@ large_cap_stocks = {
     "Exxon Mobil (XOM)": "XOM"
 }
 
+def format_market_cap(value):
+    if value is None or value == 0:
+        return "N/A"
+    trillions = 1_000_000_000_000
+    billions = 1_000_000_000
+    if value >= trillions:
+        return f"${value / trillions:.2f}T"
+    elif value >= billions:
+        return f"${value / billions:.2f}B"
+    else:
+        return f"${value:,}"
+
 @st.cache_data(show_spinner=True)
 def fetch_fundamentals(ticker):
     try:
@@ -42,6 +54,7 @@ def fetch_fundamentals(ticker):
         earnings_growth = info.get("earningsQuarterlyGrowth", None)
         dividend = "Yes" if info.get("dividendYield", 0) else "No"
         sector = info.get("sector", "Unknown")
+        market_cap = info.get("marketCap", None)
 
         ten_year_positive = "Unknown"
         try:
@@ -56,6 +69,7 @@ def fetch_fundamentals(ticker):
         return {
             "Ticker": ticker.upper(),
             "Sector": sector,
+            "Market Cap": format_market_cap(market_cap),
             "P/E": pe if pe is not None else 0,
             "P/B": pb if pb is not None else 0,
             "Debt/Equity": debt_equity if debt_equity is not None else 0,
@@ -80,7 +94,7 @@ large_cap_df = pd.DataFrame([
 if "custom_stocks_df" not in st.session_state:
     st.session_state.custom_stocks_df = pd.DataFrame(columns=large_cap_df.columns)
 
-# --- Add More Stocks (above table)
+# --- Add More Stocks (above the table)
 st.subheader("➕ Add Another Stock")
 
 with st.form("add_stock_form"):
@@ -100,7 +114,7 @@ with st.form("add_stock_form"):
                 )
                 st.success(f"{new_ticker} added to the table.")
 
-# Combine final table
+# Combine full dataset
 full_df = pd.concat([large_cap_df, st.session_state.custom_stocks_df], ignore_index=True)
 
 # --- Show Table
