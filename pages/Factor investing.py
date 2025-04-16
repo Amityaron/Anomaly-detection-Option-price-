@@ -150,3 +150,69 @@ else:
     st.dataframe(full_df, use_container_width=True)
 
     
+
+import streamlit as st
+import yfinance as yf
+import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+# Define 10 tickers for each sector
+sectors = {
+    "Technology": ["AAPL", "MSFT", "GOOGL", "AMZN", "NVDA", "INTC", "CSCO", "AMD", "ORCL", "CRM"],
+    "Healthcare": ["JNJ", "PFE", "MRK", "UNH", "ABT", "LLY", "AMGN", "BMY", "GILD", "ZTS"],
+    "Financials": ["JPM", "V", "GS", "MS", "BAC", "WFC", "C", "AXP", "MA", "COF"],
+    "Consumer Discretionary": ["TSLA", "NKE", "DIS", "MCD", "HD", "LOW", "PG", "SBUX", "BURL", "EL"],
+    "Consumer Staples": ["PEP", "KO", "WMT", "COST", "PG", "MO", "PM", "CL", "MDLZ", "HSY"],
+    "Energy": ["XOM", "CVX", "COP", "BP", "RDS-A", "SLB", "EOG", "OXY", "VLO", "HAL"],
+    "Utilities": ["NEE", "DUK", "SO", "AEP", "XEL", "SRE", "EXC", "WEC", "PEG", "D"],
+    "Real Estate": ["AMT", "PLD", "SPG", "PSA", "DLR", "O", "VTR", "REG", "ESS", "AVB"],
+    "Materials": ["LIN", "APD", "NEM", "VMC", "DOW", "DD", "IFF", "FCX", "PPG", "ECL"],
+    "Industrials": ["BA", "GE", "MMM", "LMT", "HON", "CAT", "UPS", "FDX", "DE", "UTX"]
+}
+
+# Function to fetch market cap
+def fetch_market_cap(ticker):
+    try:
+        stock = yf.Ticker(ticker)
+        info = stock.info
+        return info.get('marketCap', None)
+    except Exception as e:
+        return None
+
+# Create bar plots for each sector
+fig, axes = plt.subplots(5, 2, figsize=(16, 16))  # 5 rows, 2 columns
+axes = axes.flatten()
+
+for i, (sector, tickers) in enumerate(sectors.items()):
+    market_caps = []
+    for ticker in tickers:
+        market_cap = fetch_market_cap(ticker)
+        if market_cap:
+            market_caps.append(market_cap)
+        else:
+            market_caps.append(0)  # If no data, append 0
+    
+    # Calculate the average market cap for the sector
+    avg_market_cap = sum(market_caps) / len(market_caps) if market_caps else 0
+    
+    # Create bar plot
+    sns.barplot(
+        x=tickers,
+        y=market_caps,
+        ax=axes[i],
+        palette="viridis"
+    )
+    
+    # Set the plot title and labels
+    axes[i].set_title(f"{sector} Sector", fontsize=14)
+    axes[i].set_ylabel("Market Cap (Billions)", fontsize=12)
+    axes[i].set_xlabel("Company", fontsize=12)
+    axes[i].tick_params(axis='x', rotation=90)
+    
+    # Add average line
+    axes[i].axhline(avg_market_cap, color='red', linestyle='--')
+    axes[i].text(0.5, avg_market_cap + 0.1, f"Avg: ${avg_market_cap / 1e9:.2f}B", ha='center', va='bottom', color='red')
+
+plt.tight_layout()
+st.pyplot(fig)
