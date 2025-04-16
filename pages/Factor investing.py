@@ -9,9 +9,15 @@ st.set_page_config(page_title="Large-Cap Stock Fundamentals", layout="wide")
 
 # Fetch all S&P 500 tickers (500 stocks)
 def get_sp500_tickers():
+    # Fetch the S&P 500 index info from Yahoo Finance
     sp500 = yf.Ticker("^GSPC")
-    sp500_history = sp500.history(period="1d")
-    sp500_tickers = sp500_history.columns.tolist()
+    sp500_info = sp500.history(period="1d")
+    sp500_tickers = []  # initialize a list for tickers
+    
+    # Check if the data exists and extract tickers from the S&P 500 composition
+    if sp500_info is not None and 'Close' in sp500_info.columns:
+        sp500_tickers = sp500_info.columns.tolist()  # If you need tickers from historical data
+    
     return sp500_tickers
 
 st.title("🏦 Large-Cap Stock Fundamentals Viewer")
@@ -106,12 +112,10 @@ def fetch_fundamentals(ticker):
         st.warning(f"⚠️ Could not fetch data for {ticker}: {e}")
         return None
 
-large_cap_df = pd.DataFrame([
-    fetch_fundamentals(t)
-    for t in large_cap_stocks.values()
-    if fetch_fundamentals(t) is not None
-])
+# Start with the large cap stocks and their fundamentals
+large_cap_df = pd.DataFrame([fetch_fundamentals(t) for t in large_cap_stocks.values() if fetch_fundamentals(t) is not None])
 
+# Handle custom stocks
 if "custom_stocks_df" not in st.session_state:
     st.session_state.custom_stocks_df = pd.DataFrame(columns=large_cap_df.columns)
 
@@ -133,16 +137,15 @@ with st.form("add_stock_form"):
                 )
                 st.success(f"{new_ticker} added to the table.")
 
+# Combine data
 full_df = pd.concat([large_cap_df, st.session_state.custom_stocks_df], ignore_index=True)
 
+# Display fundamentals table
 st.subheader("📈 Stock Fundamentals Table")
 if full_df.empty:
     st.error("No data available.")
 else:
-    num_cols = [
-        "P/E", "P/B", "Debt/Equity", "Earnings Growth (%)", "(P/E)*(P/B)",
-        "ROE (%)", "Operating Margin (%)"
-    ]
+    num_cols = ["P/E", "P/B", "Debt/Equity", "Earnings Growth (%)", "(P/E)*(P/B)", "ROE (%)", "Operating Margin (%)"]
     for col in num_cols:
         if col in full_df.columns:
             full_df[col] = pd.to_numeric(full_df[col], errors='coerce').round(2)
@@ -153,56 +156,40 @@ else:
 
     st.dataframe(full_df, use_container_width=True)
 
-    # 📊 Bar Plot by Sector - show all stocks in one plot grouped by sector
+    # 📊 Bar Plot by Sector
+    sp500_tickers = get_sp500_tickers()  # Get S&P 500 tickers
+    sp500_df = pd.DataFrame([fetch_fundamentals(t) for t in sp500_tickers if fetch_fundamentals(t) is not None])
 
-    # Get S&P 500 tickers
-sp500_tickers = get_sp500_tickers()
+    # Preprocess data for the bar plots
+    sp500_df["Market Cap ($B)"] = sp500_df["Market Cap"].apply(lambda x: x / 1e9 if pd.notnull(x) else np.nan)
+    sp500_df = sp500_df.dropna(subset=["Market Cap ($B)"])
 
-# Fetch fundamentals for all S&P 500 tickers
-sp500_df = pd.DataFrame([
-    fetch_fundamentals(t)
-    for t in sp500_tickers
-    if fetch_fundamentals(t) is not None
-])
+    # Plot bar plots for each sector
+    st.subheader("📉 Market Cap by Sector for S&P 500 Stocks")
+    sectors = sp500_df["Sector"].unique()
 
-# Preprocess data for the bar plots
-sp500_df["Market Cap ($B)"] = sp500_df["Market Cap"].apply(lambda x: x / 1e9 if pd.notnull(x) else np.nan)
-sp500_df = sp500_df.dropna(subset=["Market Cap ($B)"])
+    # Create bar plots
+    fig, axes = plt.subplots(5, 2, figsize=(16, 16))
+    axes = axes.flatten()
 
-# Plot bar plots for each sector
-st.subheader("📉 Market Cap by Sector for S&P 500 Stocks")
-sectors = sp500_df["Sector"].unique()
+    for i, sector in enumerate(sectors):
+        sector_data = sp500_df[sp500_df["Sector"] == sector]
+        sector_avg = sector_data["Market Cap ($B)"].mean()
 
-# Create 10 bar plots (one for each sector)
-fig, axes = plt.subplots(5, 2, figsize=(16, 16))  # 5 rows, 2 columns
-axes = axes.flatten()
+        sns.barplot(
+            data=sector_data,
+            x="Ticker",
+            y="Market Cap ($B)",
+            ax=axes[i],
+            palette="viridis"
+        )
 
-for i, sector in enumerate(sectors):
-    sector_data = sp500_df[sp500_df["Sector"] == sector]
-    
-    # Calculate the average market cap for the sector
-    sector_avg = sector_data["Market Cap ($B)"].mean()
+        axes[i].axhline(sector_avg, color='red', linestyle='--')
+        axes[i].set_title(f"{sector} Sector", fontsize=12)
+        axes[i].set_ylabel("Market Cap (Billions)")
+        axes[i].tick_params(axis='x', rotation=90)
+        axes[i].legend([], [], frameon=False)
+        axes[i].text(0.5, sector_avg + 0.1, f"Avg: ${sector_avg:.2f}B", ha='center', va='bottom', color='red')
 
-    # Bar plot for the sector
-    sns.barplot(
-        data=sector_data,
-        x="Ticker",
-        y="Market Cap ($B)",
-        ax=axes[i],
-        palette="viridis"
-    )
-    
-    # Add a red line for the average market cap
-    axes[i].axhline(sector_avg, color='red', linestyle='--')
-    
-    axes[i].set_title(f"{sector} Sector", fontsize=12)
-    axes[i].set_ylabel("Market Cap (Billions)")
-    axes[i].tick_params(axis='x', rotation=90)
-    axes[i].legend([], [], frameon=False)  # Hide legend for clarity
-    
-    # Set the red line title
-    axes[i].text(0.5, sector_avg + 0.1, f"Avg: ${sector_avg:.2f}B", ha='center', va='bottom', color='red')
-
-# Adjust layout
-plt.tight_layout()
-st.pyplot(fig)
+    plt.tight_layout()
+    st.pyplot(fig)
