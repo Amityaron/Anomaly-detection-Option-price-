@@ -58,13 +58,6 @@ def fetch_fundamentals(ticker):
         roe = info.get("returnOnEquity", None)
         op_margin = info.get("operatingMargins", None)
 
-        try:
-            cf = stock.cashflow
-            fcf = cf.loc["Total Cash From Operating Activities"][0] - cf.loc["Capital Expenditures"][0]
-            fcf = fcf / 1_000_000_000  # in billions
-        except:
-            fcf = np.nan
-
         ten_year_positive = "Unknown"
         try:
             net_income = stock.income_stmt.loc["Net Income"]
@@ -86,7 +79,6 @@ def fetch_fundamentals(ticker):
             "(P/E)*(P/B)": (pe * pb) if pe and pb else np.nan,
             "ROE (%)": roe * 100 if roe is not None else np.nan,
             "Operating Margin (%)": op_margin * 100 if op_margin is not None else np.nan,
-            "Free Cash Flow (B)": fcf,
             "Dividend Payment": dividend,
             "10Y Positive Earnings": ten_year_positive
         }
@@ -130,7 +122,7 @@ if full_df.empty:
 else:
     num_cols = [
         "P/E", "P/B", "Debt/Equity", "Earnings Growth (%)", "(P/E)*(P/B)",
-        "ROE (%)", "Operating Margin (%)", "Free Cash Flow (B)"
+        "ROE (%)", "Operating Margin (%)"
     ]
     for col in num_cols:
         if col in full_df.columns:
