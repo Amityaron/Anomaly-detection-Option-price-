@@ -11,7 +11,6 @@ This app displays key financial data for selected **large-cap stocks** using Yah
 You can also **add more custom stocks** using the form below.
 """)
 
-# Expanded large-cap stock list (15 stocks)
 large_cap_stocks = {
     "Apple (AAPL)": "AAPL",
     "Microsoft (MSFT)": "MSFT",
@@ -55,6 +54,16 @@ def fetch_fundamentals(ticker):
         dividend = "Yes" if info.get("dividendYield", 0) else "No"
         sector = info.get("sector", "Unknown")
         market_cap = info.get("marketCap", None)
+        roe = info.get("returnOnEquity", None)
+        op_margin = info.get("operatingMargins", None)
+
+        # Calculate FCF from cash flow
+        try:
+            cf = stock.cashflow
+            fcf = cf.loc["Total Cash From Operating Activities"][0] - cf.loc["Capital Expenditures"][0]
+            fcf = fcf / 1_000_000_000  # in billions
+        except:
+            fcf = None
 
         ten_year_positive = "Unknown"
         try:
@@ -75,6 +84,9 @@ def fetch_fundamentals(ticker):
             "Debt/Equity": debt_equity if debt_equity is not None else 0,
             "Earnings Growth (%)": earnings_growth * 100 if earnings_growth is not None else 0,
             "(P/E)*(P/B)": (pe * pb) if pe and pb else 0,
+            "ROE (%)": roe * 100 if roe is not None else None,
+            "Operating Margin (%)": op_margin * 100 if op_margin is not None else None,
+            "Free Cash Flow (B)": fcf,
             "Dividend Payment": dividend,
             "10Y Positive Earnings": ten_year_positive
         }
@@ -90,13 +102,11 @@ large_cap_df = pd.DataFrame([
     if fetch_fundamentals(t) is not None
 ])
 
-# Storage for added custom stocks
 if "custom_stocks_df" not in st.session_state:
     st.session_state.custom_stocks_df = pd.DataFrame(columns=large_cap_df.columns)
 
-# --- Add More Stocks (above the table)
+# --- Add Stock Form
 st.subheader("➕ Add Another Stock")
-
 with st.form("add_stock_form"):
     new_ticker = st.text_input("Enter Stock Ticker (e.g. TSLA, NFLX)").upper().strip()
     add_button = st.form_submit_button("Fetch & Add")
@@ -117,7 +127,7 @@ with st.form("add_stock_form"):
 # Combine full dataset
 full_df = pd.concat([large_cap_df, st.session_state.custom_stocks_df], ignore_index=True)
 
-# --- Show Table
+# --- Display Table
 st.subheader("📈 Stock Fundamentals Table")
 if full_df.empty:
     st.error("No data available.")
@@ -127,5 +137,8 @@ else:
         "P/B": "{:.2f}",
         "Debt/Equity": "{:.2f}",
         "Earnings Growth (%)": "{:.2f}%",
-        "(P/E)*(P/B)": "{:.2f}"
+        "(P/E)*(P/B)": "{:.2f}",
+        "ROE (%)": "{:.2f}%",
+        "Operating Margin (%)": "{:.2f}%",
+        "Free Cash Flow (B)": "{:.2f}"
     }), use_container_width=True)
