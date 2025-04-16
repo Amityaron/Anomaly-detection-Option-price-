@@ -7,19 +7,6 @@ import seaborn as sns
 
 st.set_page_config(page_title="Large-Cap Stock Fundamentals", layout="wide")
 
-# Fetch all S&P 500 tickers (500 stocks)
-def get_sp500_tickers():
-    sp500 = yf.Ticker("^GSPC")
-    try:
-        sp500_history = sp500.history(period="1d")
-        # Extract tickers from history columns
-        if sp500_history is not None and len(sp500_history.columns) > 0:
-            return sp500_history.columns.tolist()
-        return []
-    except Exception as e:
-        st.warning(f"⚠️ Could not fetch S&P 500 tickers: {e}")
-        return []
-
 st.title("🏦 Large-Cap Stock Fundamentals Viewer")
 
 st.markdown("""
@@ -162,40 +149,4 @@ else:
 
     st.dataframe(full_df, use_container_width=True)
 
-    # 📊 Bar Plot by Sector
-    sp500_tickers = get_sp500_tickers()  # Get S&P 500 tickers
-    sp500_df = pd.DataFrame([fetch_fundamentals(t) for t in sp500_tickers if fetch_fundamentals(t) is not None])
-
-    # Preprocess data for the bar plots
-    sp500_df["Market Cap ($B)"] = sp500_df["Market Cap"].apply(lambda x: x / 1e9 if pd.notnull(x) else np.nan)
-    sp500_df = sp500_df.dropna(subset=["Market Cap ($B)"])
-
-    # Plot bar plots for each sector
-    st.subheader("📉 Market Cap by Sector for S&P 500 Stocks")
-    sectors = sp500_df["Sector"].unique()
-
-    # Create bar plots
-    fig, axes = plt.subplots(5, 2, figsize=(16, 16))
-    axes = axes.flatten()
-
-    for i, sector in enumerate(sectors):
-        sector_data = sp500_df[sp500_df["Sector"] == sector]
-        sector_avg = sector_data["Market Cap ($B)"].mean()
-
-        sns.barplot(
-            data=sector_data,
-            x="Ticker",
-            y="Market Cap ($B)",
-            ax=axes[i],
-            palette="viridis"
-        )
-
-        axes[i].axhline(sector_avg, color='red', linestyle='--')
-        axes[i].set_title(f"{sector} Sector", fontsize=12)
-        axes[i].set_ylabel("Market Cap (Billions)")
-        axes[i].tick_params(axis='x', rotation=90)
-        axes[i].legend([], [], frameon=False)
-        axes[i].text(0.5, sector_avg + 0.1, f"Avg: ${sector_avg:.2f}B", ha='center', va='bottom', color='red')
-
-    plt.tight_layout()
-    st.pyplot(fig)
+    
