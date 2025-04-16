@@ -9,16 +9,18 @@ st.set_page_config(page_title="Large-Cap Stock Fundamentals", layout="wide")
 
 # Fetch all S&P 500 tickers (500 stocks)
 def get_sp500_tickers():
-    # Fetch the S&P 500 index info from Yahoo Finance
     sp500 = yf.Ticker("^GSPC")
-    sp500_info = sp500.history(period="1d")
-    sp500_tickers = []  # initialize a list for tickers
-    
-    # Check if the data exists and extract tickers from the S&P 500 composition
-    if sp500_info is not None and 'Close' in sp500_info.columns:
-        sp500_tickers = sp500_info.columns.tolist()  # If you need tickers from historical data
-    
-    return sp500_tickers
+    try:
+        sp500_history = sp500.history(period="1d")
+        # Extract the tickers from the 'columns' of the history DataFrame
+        if sp500_history is not None and len(sp500_history.columns) > 0:
+            sp500_tickers = sp500_history.columns.tolist()
+            return sp500_tickers
+        else:
+            return []
+    except Exception as e:
+        st.warning(f"⚠️ Could not fetch S&P 500 tickers: {e}")
+        return []
 
 st.title("🏦 Large-Cap Stock Fundamentals Viewer")
 
@@ -73,6 +75,10 @@ def fetch_fundamentals(ticker):
         stock = yf.Ticker(ticker)
         info = stock.info
 
+        # Check if data is available before proceeding
+        if not info:
+            raise ValueError(f"No data available for {ticker}")
+
         pe = info.get("trailingPE", None)
         pb = info.get("priceToBook", None)
         debt_equity = info.get("debtToEquity", None)
@@ -112,7 +118,6 @@ def fetch_fundamentals(ticker):
         st.warning(f"⚠️ Could not fetch data for {ticker}: {e}")
         return None
 
-# Start with the large cap stocks and their fundamentals
 large_cap_df = pd.DataFrame([fetch_fundamentals(t) for t in large_cap_stocks.values() if fetch_fundamentals(t) is not None])
 
 # Handle custom stocks
