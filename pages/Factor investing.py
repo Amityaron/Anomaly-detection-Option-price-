@@ -12,12 +12,10 @@ def get_sp500_tickers():
     sp500 = yf.Ticker("^GSPC")
     try:
         sp500_history = sp500.history(period="1d")
-        # Extract the tickers from the 'columns' of the history DataFrame
+        # Extract tickers from history columns
         if sp500_history is not None and len(sp500_history.columns) > 0:
-            sp500_tickers = sp500_history.columns.tolist()
-            return sp500_tickers
-        else:
-            return []
+            return sp500_history.columns.tolist()
+        return []
     except Exception as e:
         st.warning(f"⚠️ Could not fetch S&P 500 tickers: {e}")
         return []
@@ -74,24 +72,27 @@ def fetch_fundamentals(ticker):
     try:
         stock = yf.Ticker(ticker)
         info = stock.info
-
-        # Check if data is available before proceeding
-        if not info:
-            raise ValueError(f"No data available for {ticker}")
-
-        pe = info.get("trailingPE", None)
-        pb = info.get("priceToBook", None)
-        debt_equity = info.get("debtToEquity", None)
-        earnings_growth = info.get("earningsQuarterlyGrowth", None)
+        
+        # If info is None or missing critical data, return None
+        if not info or 'marketCap' not in info:
+            st.warning(f"⚠️ No data found for {ticker}")
+            return None
+        
+        # Fetch data, with default values if not available
+        pe = info.get("trailingPE", np.nan)
+        pb = info.get("priceToBook", np.nan)
+        debt_equity = info.get("debtToEquity", np.nan)
+        earnings_growth = info.get("earningsQuarterlyGrowth", np.nan)
         dividend = "Yes" if info.get("dividendYield", 0) else "No"
         sector = info.get("sector", "Unknown")
-        market_cap = info.get("marketCap", None)
-        roe = info.get("returnOnEquity", None)
-        op_margin = info.get("operatingMargins", None)
+        market_cap = info.get("marketCap", np.nan)
+        roe = info.get("returnOnEquity", np.nan)
+        op_margin = info.get("operatingMargins", np.nan)
 
+        # 10-year positive earnings check
         ten_year_positive = "Unknown"
         try:
-            net_income = stock.income_stmt.loc["Net Income"]
+            net_income = stock.financials.loc["Net Income"]
             if (net_income < 0).any():
                 ten_year_positive = "No"
             else:
@@ -103,13 +104,13 @@ def fetch_fundamentals(ticker):
             "Ticker": ticker.upper(),
             "Sector": sector,
             "Market Cap": market_cap,
-            "P/E": pe if pe is not None else np.nan,
-            "P/B": pb if pb is not None else np.nan,
-            "Debt/Equity": debt_equity if debt_equity is not None else np.nan,
-            "Earnings Growth (%)": earnings_growth * 100 if earnings_growth is not None else np.nan,
+            "P/E": pe,
+            "P/B": pb,
+            "Debt/Equity": debt_equity,
+            "Earnings Growth (%)": earnings_growth * 100 if earnings_growth is not np.nan else np.nan,
             "(P/E)*(P/B)": (pe * pb) if pe and pb else np.nan,
-            "ROE (%)": roe * 100 if roe is not None else np.nan,
-            "Operating Margin (%)": op_margin * 100 if op_margin is not None else np.nan,
+            "ROE (%)": roe * 100 if roe is not np.nan else np.nan,
+            "Operating Margin (%)": op_margin * 100 if op_margin is not np.nan else np.nan,
             "Dividend Payment": dividend,
             "10Y Positive Earnings": ten_year_positive
         }
