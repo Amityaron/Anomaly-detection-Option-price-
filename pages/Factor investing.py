@@ -7,11 +7,11 @@ st.set_page_config(page_title="Large-Cap Stock Fundamentals", layout="wide")
 st.title("🏦 Large-Cap Stock Fundamentals Viewer")
 
 st.markdown("""
-This app shows key financial data for selected **large-cap stocks** using Yahoo Finance.  
-It also lets you **add more custom stocks** to the table below.
+This app displays key financial data for selected **large-cap stocks** using Yahoo Finance.  
+You can also **add more custom stocks** using the form below.
 """)
 
-# Predefined large-cap stocks
+# Large-cap list
 large_cap_stocks = {
     "Apple (AAPL)": "AAPL",
     "Microsoft (MSFT)": "MSFT",
@@ -62,17 +62,41 @@ def fetch_fundamentals(ticker):
         st.warning(f"⚠️ Could not fetch data for {ticker}: {e}")
         return None
 
-# Load large-cap data
-large_cap_df = pd.DataFrame([fetch_fundamentals(t) for t in large_cap_stocks.values() if fetch_fundamentals(t)])
+# Load large-cap stock data
+large_cap_df = pd.DataFrame([
+    fetch_fundamentals(t)
+    for t in large_cap_stocks.values()
+    if fetch_fundamentals(t) is not None
+])
 
-# Session-state to store combined table
+# Custom stocks storage
 if "custom_stocks_df" not in st.session_state:
     st.session_state.custom_stocks_df = pd.DataFrame(columns=large_cap_df.columns)
 
-# Combine both tables
+# --- Add More Stocks (above the table now)
+st.subheader("➕ Add Another Stock")
+
+with st.form("add_stock_form"):
+    new_ticker = st.text_input("Enter Stock Ticker (e.g. TSLA, NFLX)").upper().strip()
+    add_button = st.form_submit_button("Fetch & Add")
+
+    if add_button and new_ticker:
+        full_current_df = pd.concat([large_cap_df, st.session_state.custom_stocks_df])
+        if new_ticker in full_current_df["Ticker"].values:
+            st.warning(f"{new_ticker} is already in the table.")
+        else:
+            result = fetch_fundamentals(new_ticker)
+            if result:
+                st.session_state.custom_stocks_df = pd.concat(
+                    [st.session_state.custom_stocks_df, pd.DataFrame([result])],
+                    ignore_index=True
+                )
+                st.success(f"{new_ticker} added to the table.")
+
+# Combine full table
 full_df = pd.concat([large_cap_df, st.session_state.custom_stocks_df], ignore_index=True)
 
-# --- Show table
+# --- Display table
 st.subheader("📈 Stock Fundamentals Table")
 if full_df.empty:
     st.error("No data available.")
@@ -84,23 +108,3 @@ else:
         "Earnings Growth (%)": "{:.2f}%",
         "(P/E)*(P/B)": "{:.2f}"
     }), use_container_width=True)
-
-# --- Add More Stocks (bottom section)
-st.markdown("---")
-st.subheader("➕ Add Another Stock")
-
-with st.form("add_stock_form"):
-    new_ticker = st.text_input("Enter Stock Ticker (e.g. TSLA, NFLX)").upper().strip()
-    add_button = st.form_submit_button("Fetch & Add")
-
-    if add_button and new_ticker:
-        if new_ticker in full_df["Ticker"].values:
-            st.warning(f"{new_ticker} is already in the table.")
-        else:
-            result = fetch_fundamentals(new_ticker)
-            if result:
-                st.session_state.custom_stocks_df = pd.concat(
-                    [st.session_state.custom_stocks_df, pd.DataFrame([result])],
-                    ignore_index=True
-                )
-                st.success(f"{new_ticker} added to the table.")
