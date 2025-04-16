@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import yfinance as yf
+import numpy as np
 
 st.set_page_config(page_title="Large-Cap Stock Fundamentals", layout="wide")
 
@@ -57,13 +58,12 @@ def fetch_fundamentals(ticker):
         roe = info.get("returnOnEquity", None)
         op_margin = info.get("operatingMargins", None)
 
-        # Calculate FCF from cash flow
         try:
             cf = stock.cashflow
             fcf = cf.loc["Total Cash From Operating Activities"][0] - cf.loc["Capital Expenditures"][0]
             fcf = fcf / 1_000_000_000  # in billions
         except:
-            fcf = None
+            fcf = np.nan
 
         ten_year_positive = "Unknown"
         try:
@@ -79,13 +79,13 @@ def fetch_fundamentals(ticker):
             "Ticker": ticker.upper(),
             "Sector": sector,
             "Market Cap": format_market_cap(market_cap),
-            "P/E": pe if pe is not None else 0,
-            "P/B": pb if pb is not None else 0,
-            "Debt/Equity": debt_equity if debt_equity is not None else 0,
-            "Earnings Growth (%)": earnings_growth * 100 if earnings_growth is not None else 0,
-            "(P/E)*(P/B)": (pe * pb) if pe and pb else 0,
-            "ROE (%)": roe * 100 if roe is not None else None,
-            "Operating Margin (%)": op_margin * 100 if op_margin is not None else None,
+            "P/E": pe if pe is not None else np.nan,
+            "P/B": pb if pb is not None else np.nan,
+            "Debt/Equity": debt_equity if debt_equity is not None else np.nan,
+            "Earnings Growth (%)": earnings_growth * 100 if earnings_growth is not None else np.nan,
+            "(P/E)*(P/B)": (pe * pb) if pe and pb else np.nan,
+            "ROE (%)": roe * 100 if roe is not None else np.nan,
+            "Operating Margin (%)": op_margin * 100 if op_margin is not None else np.nan,
             "Free Cash Flow (B)": fcf,
             "Dividend Payment": dividend,
             "10Y Positive Earnings": ten_year_positive
@@ -95,7 +95,6 @@ def fetch_fundamentals(ticker):
         st.warning(f"⚠️ Could not fetch data for {ticker}: {e}")
         return None
 
-# Load initial large-cap stocks
 large_cap_df = pd.DataFrame([
     fetch_fundamentals(t)
     for t in large_cap_stocks.values()
@@ -105,7 +104,6 @@ large_cap_df = pd.DataFrame([
 if "custom_stocks_df" not in st.session_state:
     st.session_state.custom_stocks_df = pd.DataFrame(columns=large_cap_df.columns)
 
-# --- Add Stock Form
 st.subheader("➕ Add Another Stock")
 with st.form("add_stock_form"):
     new_ticker = st.text_input("Enter Stock Ticker (e.g. TSLA, NFLX)").upper().strip()
@@ -124,21 +122,18 @@ with st.form("add_stock_form"):
                 )
                 st.success(f"{new_ticker} added to the table.")
 
-# Combine full dataset
 full_df = pd.concat([large_cap_df, st.session_state.custom_stocks_df], ignore_index=True)
 
-# --- Display Table
 st.subheader("📈 Stock Fundamentals Table")
 if full_df.empty:
     st.error("No data available.")
 else:
-    st.dataframe(full_df.style.format({
-        "P/E": "{:.2f}",
-        "P/B": "{:.2f}",
-        "Debt/Equity": "{:.2f}",
-        "Earnings Growth (%)": "{:.2f}%",
-        "(P/E)*(P/B)": "{:.2f}",
-        "ROE (%)": "{:.2f}%",
-        "Operating Margin (%)": "{:.2f}%",
-        "Free Cash Flow (B)": "{:.2f}"
-    }), use_container_width=True)
+    num_cols = [
+        "P/E", "P/B", "Debt/Equity", "Earnings Growth (%)", "(P/E)*(P/B)",
+        "ROE (%)", "Operating Margin (%)", "Free Cash Flow (B)"
+    ]
+    for col in num_cols:
+        if col in full_df.columns:
+            full_df[col] = pd.to_numeric(full_df[col], errors='coerce').round(2)
+
+    st.dataframe(full_df, use_container_width=True)
