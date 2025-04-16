@@ -150,25 +150,18 @@ else:
     st.dataframe(full_df, use_container_width=True)
 
     
-
-import streamlit as st
-import yfinance as yf
-import pandas as pd
-import seaborn as sns
-import matplotlib.pyplot as plt
-
-# Define 10 tickers for each sector
+# Define 20 tickers for each sector
 sectors = {
-    "Technology": ["AAPL", "MSFT", "GOOGL", "AMZN", "NVDA", "INTC", "CSCO", "AMD", "ORCL", "CRM"],
-    "Healthcare": ["JNJ", "PFE", "MRK", "UNH", "ABT", "LLY", "AMGN", "BMY", "GILD", "ZTS"],
-    "Financials": ["JPM", "V", "GS", "MS", "BAC", "WFC", "C", "AXP", "MA", "COF"],
-    "Consumer Discretionary": ["TSLA", "NKE", "DIS", "MCD", "HD", "LOW", "PG", "SBUX", "BURL", "EL"],
-    "Consumer Staples": ["PEP", "KO", "WMT", "COST", "PG", "MO", "PM", "CL", "MDLZ", "HSY"],
-    "Energy": ["XOM", "CVX", "COP", "BP", "RDS-A", "SLB", "EOG", "OXY", "VLO", "HAL"],
-    "Utilities": ["NEE", "DUK", "SO", "AEP", "XEL", "SRE", "EXC", "WEC", "PEG", "D"],
-    "Real Estate": ["AMT", "PLD", "SPG", "PSA", "DLR", "O", "VTR", "REG", "ESS", "AVB"],
-    "Materials": ["LIN", "APD", "NEM", "VMC", "DOW", "DD", "IFF", "FCX", "PPG", "ECL"],
-    "Industrials": ["BA", "GE", "MMM", "LMT", "HON", "CAT", "UPS", "FDX", "DE", "UTX"]
+    "Technology": ["AAPL", "MSFT", "GOOGL", "AMZN", "NVDA", "INTC", "CSCO", "AMD", "ORCL", "CRM", "FB", "IBM", "TSM", "NVDA", "PYPL", "INTU", "SNAP", "TWTR", "ADBE", "GOOG"],
+    "Healthcare": ["JNJ", "PFE", "MRK", "UNH", "ABT", "LLY", "AMGN", "BMY", "GILD", "ZTS", "CVS", "BIIB", "SYK", "BAX", "MDT", "DHR", "HOLX", "ISRG", "ALXN", "VRTX"],
+    "Financials": ["JPM", "V", "GS", "MS", "BAC", "WFC", "C", "AXP", "MA", "COF", "SPGI", "LYB", "TROW", "VNO", "USB", "PNC", "HIG", "SCHW", "BK", "MET"],
+    "Consumer Discretionary": ["TSLA", "NKE", "DIS", "MCD", "HD", "LOW", "PG", "SBUX", "BURL", "EL", "AMZN", "TGT", "ROST", "COST", "PCLN", "YUM", "MAR", "KR", "CVS", "BABA"],
+    "Consumer Staples": ["PEP", "KO", "WMT", "COST", "PG", "MO", "PM", "CL", "MDLZ", "HSY", "KMB", "CLX", "GIS", "K", "ADM", "MKC", "HSY", "STZ", "VZ", "CHD"],
+    "Energy": ["XOM", "CVX", "COP", "BP", "RDS-A", "SLB", "EOG", "OXY", "VLO", "HAL", "PSX", "FTI", "MRO", "WMB", "CHK", "PXD", "APC", "EQT", "CLR", "DVN"],
+    "Utilities": ["NEE", "DUK", "SO", "AEP", "XEL", "SRE", "EXC", "WEC", "PEG", "D", "ES", "PPL", "AES", "ED", "CNP", "NI", "FE", "LNT", "LGCY", "NRG"],
+    "Real Estate": ["AMT", "PLD", "SPG", "PSA", "DLR", "O", "VTR", "REG", "ESS", "AVB", "IRM", "WPC", "HCP", "KIM", "EQR", "FRT", "PEI", "BXP", "HR", "LXP"],
+    "Materials": ["LIN", "APD", "NEM", "VMC", "DOW", "DD", "IFF", "FCX", "PPG", "ECL", "MT", "LTHM", "CLF", "WMT", "SYF", "ATVI", "IMT", "AA", "WRK", "GE"],
+    "Industrials": ["BA", "GE", "MMM", "LMT", "HON", "CAT", "UPS", "FDX", "DE", "UTX", "RTX", "NSC", "UNP", "CNC", "EMR", "HON", "TMO", "ITW", "EXPD", "FAST"]
 }
 
 # Function to fetch market cap
