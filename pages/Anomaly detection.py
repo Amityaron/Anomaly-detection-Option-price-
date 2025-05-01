@@ -20,7 +20,9 @@ end_date = st.date_input('End Date', value=pd.Timestamp.now())
 # Download SPY data from Yahoo Finance
 symbol = widgetuser_input
 spy = yf.download(symbol, start=start_date, end=end_date)
-st.write(spy['Close'])
+# Defensive check
+if spy.empty:
+    st.error("No data was downloaded. Please check the ticker or date range.")
 
 # Verify and flatten multi-level indexes
 if isinstance(spy.columns, pd.MultiIndex):
