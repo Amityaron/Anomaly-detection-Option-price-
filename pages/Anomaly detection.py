@@ -20,7 +20,7 @@ end_date = st.date_input('End Date', value=pd.Timestamp.now())
 # Download SPY data from Yahoo Finance
 symbol = widgetuser_input
 spy = yf.download(symbol, start=start_date, end=end_date)
-
+st.write(spy)
 # Verify and flatten multi-level indexes
 if isinstance(spy.columns, pd.MultiIndex):
     spy.columns = spy.columns.get_level_values(0)
