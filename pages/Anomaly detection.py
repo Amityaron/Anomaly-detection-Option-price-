@@ -17,13 +17,8 @@ start_date = st.date_input('Start Date', value=pd.to_datetime('2024-01-01'))
 end_date = st.date_input('End Date', value=pd.Timestamp.now())
 
 # Download SPY data from Yahoo Finance
-st.cache_data(ttl=1200)  # cache for 1 hour
 symbol = widgetuser_input
 spy = yf.download(symbol, start=start_date, end=end_date)
-@st.cache_data(ttl=1200)
-def get_data(symbol, start, end):
-    return yf.download(symbol, start=start, end=end)
-spy = get_data(symbol, start_date, end_date)
 # Defensive check
 if spy.empty:
     st.error("No data was downloaded. Please check the ticker or date range.")
