@@ -5,7 +5,6 @@ import matplotlib.pyplot as plt
 import yfinance as yf
 import seaborn as sns
 import streamlit as st
-@st.cache_data(ttl=1200)  # cache for 1 hour
 # Set the app title 
 st.title('Anomaly Detection Stock Market App')
 st.write('Welcome to my Anomaly detection app!')
@@ -18,6 +17,7 @@ start_date = st.date_input('Start Date', value=pd.to_datetime('2024-01-01'))
 end_date = st.date_input('End Date', value=pd.Timestamp.now())
 
 # Download SPY data from Yahoo Finance
+@st.cache_data(ttl=1200)  # cache for 1 hour
 symbol = widgetuser_input
 spy = yf.download(symbol, start=start_date, end=end_date)
 # Defensive check
