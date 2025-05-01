@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import yfinance as yf
 import seaborn as sns
 import streamlit as st
-
+@st.cache_data(ttl=1200)  # cache for 1 hour
 # Set the app title 
 st.title('Anomaly Detection Stock Market App')
 st.write('Welcome to my Anomaly detection app!')
@@ -23,30 +23,6 @@ spy = yf.download(symbol, start=start_date, end=end_date)
 # Defensive check
 if spy.empty:
     st.error("No data was downloaded. Please check the ticker or date range.")
-#
-# User inputs
-ticker = st.text_input("Enter Ticker Symbol:", "AAPL")
-start_date = st.date_input("Start Date", pd.to_datetime("2024-01-01"))
-end_date = st.date_input("End Date", pd.to_datetime("2025-01-01"))
-
-# Cache the download to avoid repeated calls
-@st.cache_data(ttl=3600)
-def get_data(symbol, start, end):
-    return yf.download(symbol, start=start, end=end)
-
-# Button to fetch data
-if st.button("Get Stock Data"):
-    try:
-        df = get_data(ticker, start_date, end_date)
-        if df.empty:
-            st.warning("No data returned. Please check the ticker or date range.")
-        else:
-            st.success(f"Showing data for {ticker}")
-            st.write(df.tail())
-            st.line_chart(df["Close"])
-    except Exception as e:
-        st.error(f"Error fetching data: {e}")
-#
 # Verify and flatten multi-level indexes
 if isinstance(spy.columns, pd.MultiIndex):
     spy.columns = spy.columns.get_level_values(0)
