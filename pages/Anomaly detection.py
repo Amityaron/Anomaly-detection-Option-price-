@@ -25,7 +25,7 @@ if spy.empty:
 # Verify and flatten multi-level indexes
 if isinstance(spy.columns, pd.MultiIndex):
     spy.columns = spy.columns.get_level_values(0)
-st.write("yfinance version:", yfinance.__version__)
+#st.write("yfinance version:", yfinance.__version__)
 # Define Bollinger Band parameters
 n = 22  # number of periods for moving average
 l = 2  # number of standard deviations for lower bands
