@@ -90,46 +90,44 @@ try:
                     axis=1
                 )
                 return df
+            
             # find_best_put_credit_spread
-            #def find_best_put_credit_spread(puts_df, stock_price, spread_widths):
-            #    best_spread = None
-            #    max_ror = -float('inf')
-            
-            #   for width in spread_widths:
-            #        for idx, short_put in puts_df.iterrows():
-            #            short_strike = short_put['strike']
-            #            long_strike = short_strike - width
-            
-                        # Find matching long put
-            #            long_put = puts_df[puts_df['strike'] == long_strike]
-            #            if long_put.empty:
-            #                continue
-            #            long_put = long_put.iloc[0]
-            
-                        # Calculate metrics
-             #           net_credit = short_put['OPM'] - long_put['OPM']
-             #           max_loss = width - net_credit
-             #           if max_loss <= 0:
-             #               continue  # Avoid division by zero or negative loss
-             #           ror = net_credit / max_loss
-             #           breakeven = short_strike - net_credit
-            
-             #           if ror > max_ror:
-             #               max_ror = ror
-             #               best_spread = {
-             #                   'Short Strike': short_strike,
-             #                   'Long Strike': long_strike,
-             #                   'Net Credit': round(net_credit, 2),
-             #                   'Max Loss': round(max_loss, 2),
-             #                   'Return on Risk': round(ror * 100, 2),
-             #                   'Break-even': round(breakeven, 2),
-             #                   'Probability OTM': round(short_put['P(OTM)'] * 100, 2)
-             #               }
-            
-             #   return best_spread
-################################
+            def find_best_put_credit_spread(puts_df, stock_price, spread_widths):
+                best_spread = None
+                max_ror = -float('inf')
 
-            
+                for width in spread_widths:
+                    for idx, short_put in puts_df.iterrows():
+                        short_strike = short_put['strike']
+                        long_strike = short_strike - width
+
+                        # Find matching long put
+                        long_put = puts_df[puts_df['strike'] == long_strike]
+                        if long_put.empty:
+                            continue
+                        long_put = long_put.iloc[0]
+
+                        # Calculate metrics
+                        net_credit = short_put['OPM'] - long_put['OPM']
+                        max_loss = width - net_credit
+                        if max_loss <= 0:
+                            continue  # Avoid division by zero or negative loss
+                        ror = net_credit / max_loss
+                        breakeven = short_strike - net_credit
+
+                        if ror > max_ror:
+                            max_ror = ror
+                            best_spread = {
+                                'Short Strike': short_strike,
+                                'Long Strike': long_strike,
+                                'Net Credit': round(net_credit, 2),
+                                'Max Loss': round(max_loss, 2),
+                                'Return on Risk': round(ror * 100, 2),
+                                'Break-even': round(breakeven, 2),
+                                'Probability OTM': round(short_put['P(OTM)'] * 100, 2)
+                            }
+
+                return best_spread
             # Calculate OPM and P(OTM) for calls and puts
             calls = calculate_opm_and_otm_prob(calls, "call")
             puts = calculate_opm_and_otm_prob(puts, "put")
@@ -143,19 +141,21 @@ try:
             # Display the filtered options
             st.write("### Filtered Options for Selling")
             st.write(filtered_options[["Type", "strike", "lastPrice", "impliedVolatility", "OPM", "P(OTM)"]])
-            
-            # Define spread widths to evaluate
-            spread_widths = [5, 10, 15, 20]
+             # Define spread widths to evaluate
+            spread_widths = [5, 10, 15, 20,25,30]
 
             # Filter puts based on user-defined OTM probability
-            #filtered_puts = puts[(puts['P(OTM)'] >= otm_prob_filter[0]) & (puts['P(OTM)'] <= otm_prob_filter[1])]
-            #st.write(filtered_puts)
+            filtered_puts = puts[(puts['P(OTM)'] >= otm_prob_filter[0]) & (puts['P(OTM)'] <= otm_prob_filter[1])]
+            st.write(filtered_puts)
             # Find the best spread
-            #best_spread = find_best_put_credit_spread(filtered_puts, stock_price, spread_widths)
-            #st.write(f"Number of put options: {len(puts_df)}")
+            best_spread = find_best_put_credit_spread(filtered_puts, stock_price, spread_widths)
+            
             # Display the result
-            #if best_spread:
-            #    st.subheader("📊 Optimal Put Credit Spread")
-            #    st.write(pd.DataFrame([best_spread]))
-            #else:
-            #    st.warning("No suitable put credit spread found for the selected parameters.")
+            if best_spread:
+                st.subheader("📊 Optimal Put Credit Spread")
+                st.write(pd.DataFrame([best_spread]))
+            else:
+                st.warning("No suitable put credit spread found for the selected parameters.")
+except Exception as e:
+    st.error("Could not retrieve data for the provided ticker symbol. Please check the ticker and try again.")
+    st.error(f"Error details: {e}")
