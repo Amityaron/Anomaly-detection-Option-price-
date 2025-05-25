@@ -90,43 +90,43 @@ try:
                     axis=1
                 )
                 return df
-# find_best_put_credit_spread
-def find_best_put_credit_spread(puts_df, stock_price, spread_widths):
-    best_spread = None
-    max_ror = -float('inf')
-
-    for width in spread_widths:
-        for idx, short_put in puts_df.iterrows():
-            short_strike = short_put['strike']
-            long_strike = short_strike - width
-
-            # Find matching long put
-            long_put = puts_df[puts_df['strike'] == long_strike]
-            if long_put.empty:
-                continue
-            long_put = long_put.iloc[0]
-
-            # Calculate metrics
-            net_credit = short_put['OPM'] - long_put['OPM']
-            max_loss = width - net_credit
-            if max_loss <= 0:
-                continue  # Avoid division by zero or negative loss
-            ror = net_credit / max_loss
-            breakeven = short_strike - net_credit
-
-            if ror > max_ror:
-                max_ror = ror
-                best_spread = {
-                    'Short Strike': short_strike,
-                    'Long Strike': long_strike,
-                    'Net Credit': round(net_credit, 2),
-                    'Max Loss': round(max_loss, 2),
-                    'Return on Risk': round(ror * 100, 2),
-                    'Break-even': round(breakeven, 2),
-                    'Probability OTM': round(short_put['P(OTM)'] * 100, 2)
-                }
-
-    return best_spread
+            # find_best_put_credit_spread
+            def find_best_put_credit_spread(puts_df, stock_price, spread_widths):
+                best_spread = None
+                max_ror = -float('inf')
+            
+                for width in spread_widths:
+                    for idx, short_put in puts_df.iterrows():
+                        short_strike = short_put['strike']
+                        long_strike = short_strike - width
+            
+                        # Find matching long put
+                        long_put = puts_df[puts_df['strike'] == long_strike]
+                        if long_put.empty:
+                            continue
+                        long_put = long_put.iloc[0]
+            
+                        # Calculate metrics
+                        net_credit = short_put['OPM'] - long_put['OPM']
+                        max_loss = width - net_credit
+                        if max_loss <= 0:
+                            continue  # Avoid division by zero or negative loss
+                        ror = net_credit / max_loss
+                        breakeven = short_strike - net_credit
+            
+                        if ror > max_ror:
+                            max_ror = ror
+                            best_spread = {
+                                'Short Strike': short_strike,
+                                'Long Strike': long_strike,
+                                'Net Credit': round(net_credit, 2),
+                                'Max Loss': round(max_loss, 2),
+                                'Return on Risk': round(ror * 100, 2),
+                                'Break-even': round(breakeven, 2),
+                                'Probability OTM': round(short_put['P(OTM)'] * 100, 2)
+                            }
+            
+                return best_spread
 ################################
 
             
