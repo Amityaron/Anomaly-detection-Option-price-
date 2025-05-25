@@ -152,7 +152,7 @@ try:
             #st.write(filtered_puts)
             # Find the best spread
             best_spread = find_best_put_credit_spread(filtered_puts, stock_price, spread_widths)
-            
+            st.write(f"Number of put options: {len(puts_df)}")
             # Display the result
             if best_spread:
                 st.subheader("📊 Optimal Put Credit Spread")
