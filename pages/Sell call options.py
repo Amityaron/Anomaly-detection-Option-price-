@@ -146,21 +146,16 @@ def find_best_put_credit_spread(puts_df, stock_price, spread_widths):
             
             # Define spread widths to evaluate
             spread_widths = [5, 10, 15, 20]
-            
+
             # Filter puts based on user-defined OTM probability
             filtered_puts = puts[(puts['P(OTM)'] >= otm_prob_filter[0]) & (puts['P(OTM)'] <= otm_prob_filter[1])]
             st.write(filtered_puts)
-
             # Find the best spread
-            best_spread = find_best_put_credit_spread(filtered_puts, stock_price, spread_widths)
+            #best_spread = find_best_put_credit_spread(filtered_puts, stock_price, spread_widths)
             
             # Display the result
-            if best_spread:
-                st.subheader("📊 Optimal Put Credit Spread")
-                st.write(pd.DataFrame([best_spread]))
-            else:
-                st.warning("No suitable put credit spread found for the selected parameters.")
-            
-            except Exception as e:
-                st.error("Could not retrieve data for the provided ticker symbol. Please check the ticker and try again.")
-                st.error(f"Error details: {e}")
+            #if best_spread:
+            #    st.subheader("📊 Optimal Put Credit Spread")
+            #    st.write(pd.DataFrame([best_spread]))
+            #else:
+            #    st.warning("No suitable put credit spread found for the selected parameters.")
