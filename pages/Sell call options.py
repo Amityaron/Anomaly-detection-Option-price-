@@ -128,6 +128,9 @@ try:
                             }
 
                 return best_spread
+
+            st.write("Call Strike Range:", calls['strike'].min(), "to", calls['strike'].max())
+            st.write("Call Option Sample:", calls.head(10))
             # Calculate OPM and P(OTM) for calls and puts
             calls = calculate_opm_and_otm_prob(calls, "call")
             puts = calculate_opm_and_otm_prob(puts, "put")
