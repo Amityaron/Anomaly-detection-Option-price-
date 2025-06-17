@@ -129,8 +129,6 @@ try:
 
                 return best_spread
 
-            st.write("Call Strike Range:", calls['strike'].min(), "to", calls['strike'].max())
-            st.write("Call Option Sample:", calls.head(10))
             # Calculate OPM and P(OTM) for calls and puts
             calls = calculate_opm_and_otm_prob(calls, "call")
             puts = calculate_opm_and_otm_prob(puts, "put")
@@ -162,3 +160,34 @@ try:
 except Exception as e:
     st.error("Could not retrieve data for the provided ticker symbol. Please check the ticker and try again.")
     st.error(f"Error details: {e}")
+    st.title("📈 SPY Implied Volatility vs Strike Price")
+
+    # Assume 'ticker' is already defined in your session (e.g., from sidebar input)
+    ticker_obj = ticker
+    
+    # Get nearest expiration date
+    expiration = exp_date
+    
+    # Fetch option chain
+    opt_chain = ticker_obj.option_chain(expiration)
+    calls = opt_chain.calls
+    puts = opt_chain.puts
+    
+    # Drop rows with missing IV or price data
+    calls = calls.dropna(subset=["impliedVolatility", "lastPrice", "bid", "ask"])
+    puts = puts.dropna(subset=["impliedVolatility", "lastPrice", "bid", "ask"])
+    
+    # Plotting
+    fig, ax = plt.subplots(figsize=(12, 6))
+    ax.plot(calls['strike'], calls['impliedVolatility'], label='Calls', color='blue')
+    ax.plot(puts['strike'], puts['impliedVolatility'], label='Puts', color='red')
+    ax.set_xlabel('Strike Price')
+    ax.set_ylabel('Implied Volatility')
+    ax.set_title(f'SPY IV vs Strike Price (Expiration: {expiration})')
+    ax.legend()
+    ax.grid(True)
+    
+    # Display in Streamlit
+    st.pyplot(fig)
+
+
