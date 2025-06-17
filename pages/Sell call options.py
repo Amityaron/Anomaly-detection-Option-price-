@@ -167,7 +167,7 @@ ticker_obj = ticker
     
 # Get nearest expiration date
 expiration = ticker_obj.options[0]
-    
+st.write(expiration)    
 # Fetch option chain
 opt_chain = ticker_obj.option_chain(expiration)
 calls = opt_chain.calls
