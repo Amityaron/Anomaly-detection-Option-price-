@@ -166,6 +166,7 @@ st.title("📈 SPY Implied Volatility vs Strike Price")
 ticker_obj = ticker
     
 # Get nearest expiration date
+st.write(ticker_obj.options[0]) 
 expiration = ticker_obj.options[0]
 st.write(expiration)    
 # Fetch option chain
