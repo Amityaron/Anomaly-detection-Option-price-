@@ -6,8 +6,4 @@ pandas
 seaborn
 scipy
 bayesian-optimization
-requests
-selenium
-beautifulsoup4
-webdriver-manager
-playwright 
+
