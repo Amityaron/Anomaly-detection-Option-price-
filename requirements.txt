@@ -3,6 +3,7 @@ matplotlib
 yfinance
 pandas_datareader
 datetime
+pandas
 seaborn
 scipy
 BayesianOptimization 
