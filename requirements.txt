@@ -12,3 +12,10 @@ requests
 time
 selenium
 bs4 
+pandas
+seaborn
+scipy
+requests
+selenium
+beautifulsoup4
+webdriver-manager
