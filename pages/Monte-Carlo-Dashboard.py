@@ -99,6 +99,7 @@ if stock_ticker:
             st.pyplot(fig)
 
             # Displaying some statistics
+            st.write("Monte Carlo Simulation Generates paths for a geometric Brownian motion.")
             st.write(f"Simulated final stock price mean: {paths[-1].mean():.2f}")
             st.write(f"Simulated final stock price standard deviation: {paths[-1].std():.2f}")
 
