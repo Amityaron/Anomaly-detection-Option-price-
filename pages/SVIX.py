@@ -52,7 +52,7 @@ df_holding = pd.DataFrame(
 # ---------------------------------------------------------------------
 # Show Summary Stats Only (no dataframe)
 # ---------------------------------------------------------------------
-st.write("### VIX Results (No Table Below)")
+st.write("### VIX Results")
 
 st.write(f"**Number of trades:** {len(df_holding)}")
 st.write(f"**Average days to profit:** {df_holding['Days_to_Profit'].mean():.2f}")
