@@ -66,6 +66,14 @@ st.write(f"**Min days to profit:** {df_holding['Days_to_Profit'].min()}")
 st.header("SVIX Rolling 20-Day Z-Score Strategy")
 
 svix = yf.download("SVIX", start="2020-03-01")[["Close"]].dropna()
+
+# Always convert Close to a proper Series
+close = svix["Close"]
+if isinstance(close, pd.DataFrame):
+    close = close.iloc[:, 0]
+
+svix = pd.DataFrame({"Close": close})
+
 svix["Rolling_Mean"] = svix["Close"].rolling(20).mean()
 svix["Rolling_Std"] = svix["Close"].rolling(20).std()
 svix["Z"] = (svix["Close"] - svix["Rolling_Mean"]) / svix["Rolling_Std"]
