@@ -100,29 +100,8 @@ if stock_ticker:
 
             # Displaying some statistics
             st.write("Monte Carlo Simulation Generates paths for a geometric Brownian motion.")
-            st.markdown(r"""
-### **GBM Definition**
-
-The stock price \( S_t \) under Geometric Brownian Motion follows:
-
-\[
-S_t = S_0 \cdot \exp\left( (\mu - \tfrac{1}{2}\sigma^2)t + \sigma W_t \right)
-\]
-
-where:
-- \( S_0 \) is the initial price  
-- \( \mu \) is the drift  
-- \( \sigma \) is the volatility  
-- \( W_t \) is a Wiener process (Brownian motion)
-
-### **Brownian Motion Increment Distribution**
-
-\[
-W_{t+u} - W_t \sim \mathcal{N}(0,\, u)
-\]
-
-This means increments are normally distributed with mean 0 and variance \( u \).
-""")
+            st.latex(r"S_t = S_0 \exp\left((\mu - \frac{1}{2}\sigma^2)t + \sigma W_t \right)")
+            st.latex(r"W_{t+u}-W_t \sim \mathcal{N}(0,u)")
             st.write(f"Simulated final stock price mean: {paths[-1].mean():.2f}")
             st.write(f"Simulated final stock price standard deviation: {paths[-1].std():.2f}")
 
