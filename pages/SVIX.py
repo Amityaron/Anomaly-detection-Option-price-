@@ -74,8 +74,8 @@ if isinstance(close, pd.DataFrame):
 
 svix = pd.DataFrame({"Close": close})
 
-svix["Rolling_Mean"] = svix["Close"].rolling(20).mean()
-svix["Rolling_Std"] = svix["Close"].rolling(20).std()
+svix["Rolling_Mean"] = svix["Close"].rolling(22).mean()
+svix["Rolling_Std"] = svix["Close"].rolling(22).std()
 svix["Z"] = (svix["Close"] - svix["Rolling_Mean"]) / svix["Rolling_Std"]
 
 # Signals
@@ -92,7 +92,7 @@ latest_z = float(svix["Z"].iloc[-1])
 latest_close = float(svix["Close"].iloc[-1])
 
 st.write(f"**Latest SVIX Price:** {latest_close:.2f}")
-st.write(f"**Latest 20-Day Z-Score:** {latest_z:.2f}")
+st.write(f"**Latest 22-Day Z-Score:** {latest_z:.2f}")
 
 if latest_z <= -3:
     st.error("🔥 SVIX Z-Score ≤ -3 → EXTREME Buy Signal")
