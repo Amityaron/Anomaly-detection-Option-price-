@@ -56,6 +56,7 @@ st.write("### VIX Results")
 
 st.write(f"**Number of trades:** {len(df_holding)}")
 st.write(f"**Average days to profit:** {df_holding['Days_to_Profit'].mean():.2f}")
+st.write(f"**SD days to profit:** {df_holding['Days_to_Profit'].sd():.2f}")
 st.write(f"**Median days to profit:** {df_holding['Days_to_Profit'].median()}")
 st.write(f"**Max days to profit:** {df_holding['Days_to_Profit'].max()}")
 st.write(f"**Min days to profit:** {df_holding['Days_to_Profit'].min()}")
