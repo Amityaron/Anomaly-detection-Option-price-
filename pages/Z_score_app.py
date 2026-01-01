@@ -20,7 +20,7 @@ st.markdown("""
 """)
 
 # Default ETF tickers
-default_etfs = ["IVV","CNDX.L","IVW","XLK", "SOXX", "XLF", "BTC-USD", "URTH", "IXN","IAU","SMH","IYW","SVIX"]
+default_etfs = ["IVV","IVW","XLK", "SOXX", "XLF", "BTC-USD", "URTH", "IXN","IAU","SMH","IYW","SVIX","CNDX.L"]
 
 # Initialize session state for tickers if it doesn't exist
 if 'etfs' not in st.session_state:
@@ -86,6 +86,7 @@ df = pd.DataFrame(results)
 # Fill NaN values and sort by Z-Score
 df_sorted = df.sort_values(by='Z Score', ascending=True)
 st.table(df_sorted)
+
 
 
 
