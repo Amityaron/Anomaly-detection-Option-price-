@@ -66,6 +66,7 @@ for etf in etfs:
     mean_last_month = float(data.mean())
     std_last_month = float(data.std())
     values = data.dropna().to_numpy(dtype=float)
+    st.write(values)
     skewness_last_month = round(float(skew(values)), 2) if len(values) > 1 else 0
     kurtosis_last_month = round(float(kurtosis(values)), 2) if len(values) > 1 else 0
     current_price = float(data.iloc[-1])
@@ -86,6 +87,7 @@ df = pd.DataFrame(results)
 # Fill NaN values and sort by Z-Score
 df_sorted = df.sort_values(by='Z Score', ascending=True)
 st.table(df_sorted)
+
 
 
 
