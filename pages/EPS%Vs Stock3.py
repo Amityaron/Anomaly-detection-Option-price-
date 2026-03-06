@@ -9,9 +9,10 @@ st.set_page_config(page_title="EPS % vs Stock % (Earnings-to-Earnings)", layout=
 
 st.title("EPS % Change vs Stock % Change (per earnings / quarter)")
 
-# Better to move this to st.secrets in production
-FMP_API_KEY = "JCg3MZl2jgbtkr6gws4rwAhfkF3DKokS"
-FMP_BASE_URL = "https://financialmodelingprep.com/api/v3"
+# Put this in st.secrets in production:
+# FMP_API_KEY = st.secrets["FMP_API_KEY"]
+FMP_API_KEY = "PUT_YOUR_NEW_KEY_HERE"
+FMP_BASE_URL = "https://financialmodelingprep.com/stable"
 
 with st.sidebar:
     ticker = st.text_input("Stock ticker", value="NVDA").strip().upper()
@@ -21,21 +22,16 @@ with st.sidebar:
 @st.cache_data(ttl=60 * 60, show_spinner=False)
 def get_fmp_quarterly_eps(ticker: str, years_back: int) -> pd.DataFrame:
     """
-    Pull quarterly income statements from FMP and build:
+    Pull earnings reports from FMP and build:
     - EPS_Date
     - Reported EPS
     - EPS_Change_% (QoQ)
     - EPS_TTM
     """
-    # Ask for more rows than strictly needed so rolling TTM works
-    # ~4 quarters/year + a few extra rows
-    limit = max(8, years_back * 4 + 4)
-
-    url = f"{FMP_BASE_URL}/income-statement/{ticker}"
+    url = f"{FMP_BASE_URL}/earnings"
     params = {
-    "period": "quarter",
-    "limit": limit,
-    "apikey": FMP_API_KEY,
+        "symbol": ticker,
+        "apikey": FMP_API_KEY,
     }
 
     r = requests.get(url, params=params, timeout=30)
@@ -47,17 +43,28 @@ def get_fmp_quarterly_eps(ticker: str, years_back: int) -> pd.DataFrame:
 
     df = pd.DataFrame(data)
 
-    # FMP income statement commonly includes date and eps
-    required_cols = {"date", "eps"}
-    if not required_cols.issubset(df.columns):
+    # Keep this flexible because field names can vary a bit
+    date_candidates = ["date", "fillingDate", "acceptedDate"]
+    eps_candidates = ["eps", "epsActual", "actualEps", "reportedEPS", "reportedEps"]
+
+    date_col = next((c for c in date_candidates if c in df.columns), None)
+    eps_col = next((c for c in eps_candidates if c in df.columns), None)
+
+    if date_col is None or eps_col is None:
         return pd.DataFrame()
 
-    df = df[["date", "eps"]].copy()
-    df = df.rename(columns={"date": "EPS_Date", "eps": "Reported EPS"})
+    df = df[[date_col, eps_col]].copy()
+    df = df.rename(columns={date_col: "EPS_Date", eps_col: "Reported EPS"})
 
     df["EPS_Date"] = pd.to_datetime(df["EPS_Date"], errors="coerce")
     df["Reported EPS"] = pd.to_numeric(df["Reported EPS"], errors="coerce")
-    df = df.dropna(subset=["EPS_Date", "Reported EPS"]).sort_values("EPS_Date").reset_index(drop=True)
+
+    df = (
+        df.dropna(subset=["EPS_Date", "Reported EPS"])
+          .sort_values("EPS_Date")
+          .drop_duplicates(subset=["EPS_Date"], keep="last")
+          .reset_index(drop=True)
+    )
 
     start_date = pd.Timestamp.today().normalize() - pd.DateOffset(years=years_back)
     df = df[df["EPS_Date"] >= start_date].copy()
@@ -65,10 +72,7 @@ def get_fmp_quarterly_eps(ticker: str, years_back: int) -> pd.DataFrame:
     if len(df) < 2:
         return pd.DataFrame()
 
-    # Quarter-over-quarter EPS % change
     df["EPS_Change_%"] = df["Reported EPS"].pct_change() * 100
-
-    # TTM EPS = rolling sum of last 4 quarters
     df["EPS_TTM"] = df["Reported EPS"].rolling(window=4, min_periods=4).sum()
 
     return df.reset_index(drop=True)
@@ -81,18 +85,20 @@ def get_price_history(ticker: str, years_back: int) -> pd.DataFrame:
     if price_df.empty:
         return pd.DataFrame()
 
-    # yfinance usually returns Date column after reset_index()
     if "Date" in price_df.columns:
         price_df = price_df.rename(columns={"Date": "Price_Date"})
     else:
-        # fallback in case index name changes
         price_df = price_df.rename(columns={price_df.columns[0]: "Price_Date"})
 
     price_df["Price_Date"] = pd.to_datetime(price_df["Price_Date"], errors="coerce")
     if getattr(price_df["Price_Date"].dt, "tz", None) is not None:
         price_df["Price_Date"] = price_df["Price_Date"].dt.tz_convert(None)
 
-    price_df = price_df.dropna(subset=["Price_Date", "Close"]).sort_values("Price_Date").reset_index(drop=True)
+    price_df = (
+        price_df.dropna(subset=["Price_Date", "Close"])
+                .sort_values("Price_Date")
+                .reset_index(drop=True)
+    )
     return price_df
 
 @st.cache_data(ttl=60 * 60, show_spinner=False)
@@ -105,7 +111,6 @@ def build_eps_vs_stock_df(ticker: str, years_back: int) -> pd.DataFrame:
     if price_df.empty:
         return pd.DataFrame()
 
-    # Align each EPS report date to the latest close on/before that date
     aligned = pd.merge_asof(
         eps_df.sort_values("EPS_Date"),
         price_df.sort_values("Price_Date"),
