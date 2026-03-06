@@ -9,9 +9,8 @@ st.set_page_config(page_title="EPS % vs Stock % (Earnings-to-Earnings)", layout=
 
 st.title("EPS % Change vs Stock % Change (per earnings / quarter)")
 
-# Put this in st.secrets in production:
-# FMP_API_KEY = st.secrets["FMP_API_KEY"]
-FMP_API_KEY = "PUT_YOUR_NEW_KEY_HERE"
+# For now:
+FMP_API_KEY = "JCg3MZl2jgbtkr6gws4rwAhfkF3DKokS"
 FMP_BASE_URL = "https://financialmodelingprep.com/stable"
 
 with st.sidebar:
@@ -43,7 +42,6 @@ def get_fmp_quarterly_eps(ticker: str, years_back: int) -> pd.DataFrame:
 
     df = pd.DataFrame(data)
 
-    # Keep this flexible because field names can vary a bit
     date_candidates = ["date", "fillingDate", "acceptedDate"]
     eps_candidates = ["eps", "epsActual", "actualEps", "reportedEPS", "reportedEps"]
 
