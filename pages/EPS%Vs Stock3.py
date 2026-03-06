@@ -11,7 +11,7 @@ st.title("EPS % Change vs Stock % Change (per earnings / quarter)")
 
 # Better to move this to st.secrets in production
 FMP_API_KEY = "JCg3MZl2jgbtkr6gws4rwAhfkF3DKokS"
-FMP_BASE_URL = "https://financialmodelingprep.com/stable"
+FMP_BASE_URL = "https://financialmodelingprep.com/api/v3"
 
 with st.sidebar:
     ticker = st.text_input("Stock ticker", value="NVDA").strip().upper()
@@ -31,12 +31,11 @@ def get_fmp_quarterly_eps(ticker: str, years_back: int) -> pd.DataFrame:
     # ~4 quarters/year + a few extra rows
     limit = max(8, years_back * 4 + 4)
 
-    url = f"{FMP_BASE_URL}/income-statement"
+    url = f"{FMP_BASE_URL}/income-statement/{ticker}"
     params = {
-        "symbol": ticker,
-        "period": "quarter",
-        "limit": limit,
-        "apikey": FMP_API_KEY,
+    "period": "quarter",
+    "limit": limit,
+    "apikey": FMP_API_KEY,
     }
 
     r = requests.get(url, params=params, timeout=30)
