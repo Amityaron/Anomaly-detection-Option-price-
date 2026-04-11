@@ -26,7 +26,7 @@ ENTRY_LEVEL = st.number_input(
 vix = yf.download("^VIX", start="2000-01-01")[['High', 'Low']].dropna()
 
 holding_periods = []
-
+st.write(vix['High'].iloc[0]))
 for i in range(len(vix)):
     high = float(vix['High'].iloc[i])
     if high >= ENTRY_LEVEL:
