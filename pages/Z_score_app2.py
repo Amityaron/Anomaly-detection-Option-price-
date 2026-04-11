@@ -17,7 +17,7 @@ st.markdown("""
 - Highly negatively skewed: Skewness < -1
 """)
 
-default_etfs = ["IVV", "IVW", "XLK", "SOXX", "XLF", "BTC-USD", "URTH", "IXN", "IAU", "SMH", "IYW", "SVIX", "CNDX.L"]
+default_etfs = ["IVV", "IVW", "XLK", "SOXX", "XLF", "BTC-USD", "ACWI", "IXN", "IAU", "SMH", "IYW", "SVIX", "CNDX.L"]
 
 if 'etfs' not in st.session_state:
     st.session_state.etfs = default_etfs.copy()
