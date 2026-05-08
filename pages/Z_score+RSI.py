@@ -339,7 +339,7 @@ if run_button:
             use_trend_filter=use_trend_filter
         )
 
-    buy_signals = df[df["BuySignal_First"]]
+    buy_signals = df[df["BuySignal_First"]].copy()
 
     col1, col2, col3, col4 = st.columns(4)
 
@@ -377,8 +377,6 @@ if run_button:
         use_container_width=True
     )
 
-    st.subheader("Recent Data")
-
     columns_to_show = [
         "Close",
         "RSI",
@@ -393,22 +391,25 @@ if run_button:
     if "MA_Long" in df.columns:
         columns_to_show.append("MA_Long")
 
-    st.dataframe(
-        df[columns_to_show].tail(100),
-        use_container_width=True
-    )
-
     st.subheader("Buy Signal Dates")
 
     if buy_signals.empty:
         st.info("No buy signals found for the selected settings.")
     else:
+        buy_signals["Percentage Change vs Current Price"] = (
+            (latest_close / buy_signals["Close"]) - 1
+        ) * 100
+
+        buy_signal_columns = columns_to_show + [
+            "Percentage Change vs Current Price"
+        ]
+
         st.dataframe(
-            buy_signals[columns_to_show],
+            buy_signals[buy_signal_columns].round(2),
             use_container_width=True
         )
 
-        csv = buy_signals[columns_to_show].to_csv().encode("utf-8")
+        csv = buy_signals[buy_signal_columns].to_csv().encode("utf-8")
 
         st.download_button(
             label="Download buy signals as CSV",
