@@ -14,7 +14,7 @@ st.write('Welcome to my Anomaly detection app!')
 widgetuser_input = st.text_input('Enter a ticker based on Yahoo Finance:', 'SPY')
 
 # Create date inputs for start and end dates
-start_date = st.date_input('Start Date', value=pd.to_datetime('2024-01-01'))
+start_date = st.date_input('Start Date', value=pd.to_datetime('2025-01-01'))
 end_date = st.date_input('End Date', value=pd.Timestamp.now())
 
 # Download data from Yahoo Finance
@@ -54,16 +54,16 @@ if 'Close' in spy.columns:
     spy.dropna(subset=['Close', 'Diff_Z_Score_22'], inplace=True)
 
     # Generate buy signal
-    # Buy when Diff Z-Score 22 Days < -2
+    # Buy when Diff Z-Score 22 Days < -2.2
     spy['Signal'] = 0
-    spy.loc[spy['Diff_Z_Score_22'] < -2, 'Signal'] = 1
+    spy.loc[spy['Diff_Z_Score_22'] < -2.2, 'Signal'] = 1
     spy['Signal'] = spy['Signal'].diff().fillna(0)
     spy.loc[spy['Signal'] < 0, 'Signal'] = 0
 
     # Generate sell signal
     # Sell when Diff Z-Score 22 Days > 2
     spy['Sell_Signal'] = 0
-    spy.loc[spy['Diff_Z_Score_22'] > 2, 'Sell_Signal'] = 1
+    spy.loc[spy['Diff_Z_Score_22'] > 2.2, 'Sell_Signal'] = 1
     spy['Sell_Signal'] = spy['Sell_Signal'].diff().fillna(0)
     spy.loc[spy['Sell_Signal'] < 0, 'Sell_Signal'] = 0
 
