@@ -14,10 +14,10 @@ st.write('Welcome to my Anomaly detection app!')
 widgetuser_input = st.text_input('Enter a ticker based on Yahoo Finance:', 'SPY')
 
 # Create date inputs for start and end dates
-start_date = st.date_input('Start Date', value=pd.to_datetime('2025-01-01'))
+start_date = st.date_input('Start Date', value=pd.to_datetime('2024-01-01'))
 end_date = st.date_input('End Date', value=pd.Timestamp.now())
 
-# Download SPY data from Yahoo Finance
+# Download data from Yahoo Finance
 symbol = widgetuser_input
 spy = yf.download(symbol, start=start_date, end=end_date)
 
@@ -80,20 +80,27 @@ for index, row in spy.loc[spy['Signal'] == 1].iterrows():
 
 pct_change = [((spy.iloc[-1]['Close'] / x) - 1) * 100 for x in buy_prices]
 
-# Plot the data and signals
+# ================================
+# Plot only price and signals
+# ================================
+
 title = f"{symbol} ({start_date} to {end_date})"
 
 fig, ax = plt.subplots(figsize=(12, 6))
 plt.title(title)
 
-# Price chart
+# Plot Close price only
 ax.plot(spy['Close'], label='Close')
+
+# Plot buy signals
 ax.plot(
     spy.loc[spy['Signal'] == 1, 'Close'],
     'o',
     markersize=10,
     label='Buy Signal'
 )
+
+# Plot sell signals
 ax.plot(
     spy.loc[spy['Sell_Signal'] == 1, 'Close'],
     'x',
@@ -102,25 +109,15 @@ ax.plot(
 )
 
 # Current price horizontal line
-ax.axhline(y=spy.iloc[-1]['Close'], color='r', linestyle='--', label='Current Price')
+ax.axhline(
+    y=spy.iloc[-1]['Close'],
+    color='r',
+    linestyle='--',
+    label='Current Price'
+)
 
 ax.set_ylabel('Price')
-
-# Z-score chart on second axis
-ax2 = ax.twinx()
-ax2.plot(
-    spy['Diff_Z_Score_22'],
-    label='Diff Z-Score 22 Days',
-    linestyle='--'
-)
-ax2.axhline(y=-2, linestyle='--', label='Buy Threshold -2')
-ax2.axhline(y=2, linestyle='--', label='Sell Threshold 2')
-ax2.axhline(y=0, linestyle=':', label='Z-Score 0')
-ax2.set_ylabel('Diff Z-Score 22 Days')
-
-# Legends
-ax.legend(loc='upper left')
-ax2.legend(loc='upper right')
+ax.legend()
 
 st.pyplot(fig)
 
@@ -132,13 +129,14 @@ df = pd.DataFrame({
 })
 
 st.write("Current price:", round(spy.iloc[-1]['Close'], 2))
+st.write("Latest Diff Z-Score 22 Days:", round(spy.iloc[-1]['Diff_Z_Score_22'], 2))
 st.table(df.round(2))
 
-# Display latest z-score
-st.write("Latest Diff Z-Score 22 Days:", round(spy.iloc[-1]['Diff_Z_Score_22'], 2))
 
-
+# ================================
 # Monthly Percentage Changes
+# ================================
+
 st.subheader('Monthly Percentage Changes')
 
 # Start and end dates for downloading historical data
