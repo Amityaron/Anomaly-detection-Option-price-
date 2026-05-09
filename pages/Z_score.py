@@ -115,7 +115,6 @@ for etf in etfs:
         results.append({
             "ETF Symbol": etf,
             "Current Price": round(float(current_price), 2),
-            "Diff 22 Days": round(float(current_diff_22), 2),
             "Diff Z Score 22 Days": diff_z_score_22,
             "Skewness": round(float(skewness_last_month), 4),
             "Kurtosis": round(float(kurtosis_last_month), 4)
