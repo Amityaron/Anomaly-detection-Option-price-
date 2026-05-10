@@ -56,14 +56,14 @@ if 'Close' in spy.columns:
     # Generate buy signal
     # Buy when Diff Z-Score 22 Days < -3
     spy['Signal'] = 0
-    spy.loc[spy['Diff_Z_Score_22'] < -3, 'Signal'] = 1
+    spy.loc[spy['Diff_Z_Score_22'] < -2.5, 'Signal'] = 1
     spy['Signal'] = spy['Signal'].diff().fillna(0)
     spy.loc[spy['Signal'] < 0, 'Signal'] = 0
 
     # Generate sell signal
     # Sell when Diff Z-Score 22 Days > 2
     spy['Sell_Signal'] = 0
-    spy.loc[spy['Diff_Z_Score_22'] > 3, 'Sell_Signal'] = 1
+    spy.loc[spy['Diff_Z_Score_22'] > 2.5, 'Sell_Signal'] = 1
     spy['Sell_Signal'] = spy['Sell_Signal'].diff().fillna(0)
     spy.loc[spy['Sell_Signal'] < 0, 'Sell_Signal'] = 0
 
