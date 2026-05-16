@@ -20,7 +20,6 @@ from dataclasses import dataclass
 
 import numpy as np
 import pandas as pd
-import pandas_datareader.data as web
 import plotly.graph_objects as go
 import streamlit as st
 import yfinance as yf
