@@ -4,22 +4,29 @@ Streamlit app: S&P 500 Equal Weight / GDP valuation model
 Formula:
     Index Value = S&P 500 Equal Weight / GDP
 
-Data source:
-    Yahoo Finance only, via yfinance
+Data sources:
+    S&P 500 Equal Weight: Yahoo Finance via yfinance
+    GDP: Local CSV file from data/GDP.csv
 
-Default tickers:
-    S&P 500 Equal Weight: ^SPXEW
-    US Annual GDP: GDPCA.I
+Repo structure:
+    Anomaly-detection-Option-price/
+    ├── main.py
+    ├── requirements.txt
+    ├── README.md
+    ├── pages/
+    │   └── index.py
+    └── data/
+        └── GDP.csv
 
 Run:
-    pip install streamlit yfinance pandas numpy plotly
-    streamlit run "Index Value.py"
+    streamlit run main.py
 """
 
 from __future__ import annotations
 
 import datetime as dt
 from dataclasses import dataclass
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -38,7 +45,6 @@ st.set_page_config(
 @dataclass
 class ModelConfig:
     stock_ticker: str
-    gdp_ticker: str
     start: dt.date
     end: dt.date
     normalize: bool
@@ -46,10 +52,14 @@ class ModelConfig:
 
 
 @st.cache_data(ttl=60 * 60)
-def load_yahoo_close(ticker: str, start: dt.date, end: dt.date, column_name: str) -> pd.DataFrame:
+def load_yahoo_close(
+    ticker: str,
+    start: dt.date,
+    end: dt.date,
+    column_name: str,
+) -> pd.DataFrame:
     """
-    Download Close price/value from Yahoo Finance using yfinance.
-    Works for stock/index tickers and Yahoo economic series tickers.
+    Download stock/index close price from Yahoo Finance.
     """
 
     df = yf.download(
@@ -64,16 +74,12 @@ def load_yahoo_close(ticker: str, start: dt.date, end: dt.date, column_name: str
     if df.empty:
         raise ValueError(
             f"No Yahoo Finance data returned for ticker: {ticker}. "
-            "Try another ticker or a longer date range."
+            "Try another ticker. For example, use RSP if ^SPXEW fails."
         )
 
     if isinstance(df.columns, pd.MultiIndex):
-        if "Close" not in df.columns.get_level_values(0):
-            raise ValueError(f"Yahoo data for {ticker} does not contain a Close column.")
         close = df["Close"].iloc[:, 0]
     else:
-        if "Close" not in df.columns:
-            raise ValueError(f"Yahoo data for {ticker} does not contain a Close column.")
         close = df["Close"]
 
     out = close.rename(column_name).to_frame()
@@ -87,7 +93,11 @@ def load_yahoo_close(ticker: str, start: dt.date, end: dt.date, column_name: str
 
 
 @st.cache_data(ttl=60 * 60)
-def load_stock_index_data(ticker: str, start: dt.date, end: dt.date) -> pd.DataFrame:
+def load_stock_index_data(
+    ticker: str,
+    start: dt.date,
+    end: dt.date,
+) -> pd.DataFrame:
     return load_yahoo_close(
         ticker=ticker,
         start=start,
@@ -97,46 +107,117 @@ def load_stock_index_data(ticker: str, start: dt.date, end: dt.date) -> pd.DataF
 
 
 @st.cache_data(ttl=60 * 60 * 6)
-def load_gdp_data_from_yahoo(ticker: str, start: dt.date, end: dt.date) -> pd.DataFrame:
+def load_gdp_from_csv() -> pd.DataFrame:
     """
-    Load GDP from Yahoo Finance.
+    Load GDP data from local CSV file:
+        data/GDP.csv
 
-    Default:
-        GDPCA.I = US Annual GDP
+    Required CSV format:
+        date,gdp
+        2003-01-01,11174.1
+        2004-01-01,11922.4
 
-    Note:
-        GDP data from Yahoo is usually annual, not daily.
-        The model forward-fills GDP values to stock-market dates.
+    The code also supports common alternatives:
+        DATE,GDP
+        observation_date,GDP
     """
 
-    gdp = load_yahoo_close(
-        ticker=ticker,
-        start=start,
-        end=end,
-        column_name="gdp",
+    repo_root = Path(__file__).resolve().parent.parent
+    gdp_path = repo_root / "data" / "GDP.csv"
+
+    if not gdp_path.exists():
+        raise FileNotFoundError(
+            f"GDP CSV file not found: {gdp_path}\n\n"
+            "Make sure the file exists here:\n"
+            "Anomaly-detection-Option-price/data/GDP.csv"
+        )
+
+    gdp = pd.read_csv(gdp_path)
+
+    # Normalize column names
+    original_columns = list(gdp.columns)
+    gdp.columns = [str(col).strip() for col in gdp.columns]
+
+    lower_map = {col.lower(): col for col in gdp.columns}
+
+    # Find date column
+    if "date" in lower_map:
+        date_col = lower_map["date"]
+    elif "observation_date" in lower_map:
+        date_col = lower_map["observation_date"]
+    else:
+        date_col = gdp.columns[0]
+
+    # Find GDP column
+    if "gdp" in lower_map:
+        gdp_col = lower_map["gdp"]
+    elif "value" in lower_map:
+        gdp_col = lower_map["value"]
+    else:
+        # Use the first non-date column as GDP
+        possible_cols = [col for col in gdp.columns if col != date_col]
+        if not possible_cols:
+            raise ValueError(
+                f"Could not find GDP column in GDP.csv. Columns found: {original_columns}"
+            )
+        gdp_col = possible_cols[0]
+
+    gdp = gdp[[date_col, gdp_col]].copy()
+    gdp = gdp.rename(columns={date_col: "date", gdp_col: "gdp"})
+
+    gdp["date"] = pd.to_datetime(gdp["date"], errors="coerce")
+    gdp["gdp"] = (
+        gdp["gdp"]
+        .astype(str)
+        .str.replace(",", "", regex=False)
+        .str.replace("$", "", regex=False)
+        .str.strip()
     )
+    gdp["gdp"] = pd.to_numeric(gdp["gdp"], errors="coerce")
+
+    gdp = gdp.dropna(subset=["date", "gdp"])
+    gdp = gdp.set_index("date").sort_index()
+
+    if gdp.empty:
+        raise ValueError(
+            "GDP.csv is empty or invalid after cleaning. "
+            "Make sure it has columns like: date,gdp"
+        )
+
+    gdp.index = pd.to_datetime(gdp.index).tz_localize(None)
 
     return gdp
 
 
 def build_model(config: ModelConfig) -> pd.DataFrame:
     stock = load_stock_index_data(config.stock_ticker, config.start, config.end)
-    gdp = load_gdp_data_from_yahoo(config.gdp_ticker, config.start, config.end)
+    gdp = load_gdp_from_csv()
 
-    # GDP is annual/low-frequency; align it to stock dates by forward filling.
+    # Keep GDP only up to selected end date
+    gdp = gdp.loc[
+        (gdp.index >= pd.Timestamp(config.start)) &
+        (gdp.index <= pd.Timestamp(config.end))
+    ]
+
+    if gdp.empty:
+        raise ValueError(
+            "No GDP data found in data/GDP.csv for the selected date range. "
+            "Try an earlier start date or check your GDP.csv dates."
+        )
+
+    # GDP is low-frequency monthly/quarterly/annual.
+    # Align to daily stock-market dates by forward-filling latest known GDP value.
     df = stock.join(gdp, how="left")
     df["gdp"] = df["gdp"].ffill()
     df = df.dropna(subset=["stock_index", "gdp"])
 
     if df.empty:
         raise ValueError(
-            "No overlapping stock-index and GDP data after alignment. "
-            "Try an earlier start date, for example 2003-01-01."
+            "No overlapping S&P 500 Equal Weight and GDP data after alignment. "
+            "Try an earlier start date."
         )
 
     if config.normalize:
-        # Recommended because stock-index points and GDP dollars are different units.
-        # The formula remains stock_index / GDP, but both inputs are rebased to 100.
         df["stock_index_used"] = df["stock_index"] / df["stock_index"].iloc[0] * 100
         df["gdp_used"] = df["gdp"] / df["gdp"].iloc[0] * 100
     else:
@@ -146,18 +227,28 @@ def build_model(config: ModelConfig) -> pd.DataFrame:
     # Main formula
     df["index_value"] = df["stock_index_used"] / df["gdp_used"]
 
-    # Expanding historical statistics
+    # Expanding historical stats
     df["mean"] = df["index_value"].expanding(min_periods=20).mean()
     df["sd"] = df["index_value"].expanding(min_periods=20).std(ddof=1)
     df["z_score"] = (df["index_value"] - df["mean"]) / df["sd"]
 
-    # Rolling statistics
+    # Rolling stats
     w = max(20, int(config.rolling_window))
     min_periods = max(10, w // 4)
 
-    df["rolling_mean"] = df["index_value"].rolling(w, min_periods=min_periods).mean()
-    df["rolling_sd"] = df["index_value"].rolling(w, min_periods=min_periods).std(ddof=1)
-    df["rolling_z_score"] = (df["index_value"] - df["rolling_mean"]) / df["rolling_sd"]
+    df["rolling_mean"] = df["index_value"].rolling(
+        window=w,
+        min_periods=min_periods,
+    ).mean()
+
+    df["rolling_sd"] = df["index_value"].rolling(
+        window=w,
+        min_periods=min_periods,
+    ).std(ddof=1)
+
+    df["rolling_z_score"] = (
+        df["index_value"] - df["rolling_mean"]
+    ) / df["rolling_sd"]
 
     # SD bands
     for k in [1, 2, -1, -2]:
@@ -286,7 +377,7 @@ def component_chart(df: pd.DataFrame) -> go.Figure:
         go.Scatter(
             x=df.index,
             y=df["gdp_used"],
-            name="GDP used",
+            name="GDP from CSV used",
         )
     )
 
@@ -324,13 +415,13 @@ def raw_input_chart(df: pd.DataFrame) -> go.Figure:
         go.Scatter(
             x=df.index,
             y=df["gdp"],
-            name="Raw GDP",
+            name="Raw GDP from CSV",
             yaxis="y2",
         )
     )
 
     fig.update_layout(
-        title="Raw Yahoo Finance Inputs",
+        title="Raw Inputs",
         xaxis_title="Date",
         yaxis=dict(title="S&P 500 Equal Weight"),
         yaxis2=dict(
@@ -356,13 +447,16 @@ st.title("📈 S&P 500 Equal Weight / GDP Valuation Model")
 
 st.markdown(
     """
-This app uses **Yahoo Finance only**.
+This app uses:
+
+**S&P 500 Equal Weight** from Yahoo Finance  
+**GDP** from your local repo file: `data/GDP.csv`
 
 Formula:
 
 **Index Value = S&P 500 Equal Weight / GDP**
 
-Then the app calculates:
+The app calculates:
 
 - Historical mean
 - Standard deviation
@@ -378,13 +472,7 @@ with st.sidebar:
     stock_ticker = st.text_input(
         "S&P 500 Equal Weight Yahoo ticker",
         value="^SPXEW",
-        help="Yahoo Finance ticker for S&P 500 Equal Weighted. If it fails, try RSP as ETF proxy.",
-    )
-
-    gdp_ticker = st.text_input(
-        "GDP Yahoo ticker",
-        value="GDPCA.I",
-        help="Yahoo Finance ticker for US Annual GDP.",
+        help="If ^SPXEW fails, try RSP as ETF proxy.",
     )
 
     today = dt.date.today()
@@ -407,8 +495,8 @@ with st.sidebar:
         "Normalize both inputs to 100 at start",
         value=True,
         help=(
-            "Recommended. S&P index points and GDP dollars are different units. "
-            "This keeps the formula but compares both series on the same base."
+            "Recommended because index points and GDP values are different units. "
+            "This keeps the formula but rebases both series to 100."
         ),
     )
 
@@ -429,9 +517,7 @@ with st.sidebar:
 
     st.divider()
 
-    st.caption(
-        "Default Yahoo tickers: ^SPXEW for S&P 500 Equal Weight and GDPCA.I for US Annual GDP."
-    )
+    st.caption("GDP file path used by this page: data/GDP.csv")
 
 
 if start >= end:
@@ -441,7 +527,6 @@ if start >= end:
 
 config = ModelConfig(
     stock_ticker=stock_ticker.strip(),
-    gdp_ticker=gdp_ticker.strip(),
     start=start,
     end=end,
     normalize=normalize,
@@ -458,10 +543,10 @@ except Exception as e:
         """
 Troubleshooting:
 
-1. Try changing the S&P 500 Equal Weight ticker from `^SPXEW` to `RSP`.
-2. Keep GDP ticker as `GDPCA.I`.
-3. Try an earlier start date, such as `2003-01-01`.
-4. Yahoo Finance sometimes blocks or delays data requests. Refresh and try again.
+1. Make sure your repo contains `data/GDP.csv`.
+2. Make sure the CSV has columns like `date,gdp`.
+3. If `^SPXEW` fails, use `RSP`.
+4. Try an earlier start date, such as `2003-01-01`.
 """
     )
 
@@ -515,14 +600,21 @@ st.plotly_chart(
     use_container_width=True,
 )
 
-with st.expander("Show raw Yahoo Finance inputs"):
+with st.expander("Show raw inputs"):
     st.plotly_chart(
         raw_input_chart(df),
         use_container_width=True,
     )
 
+with st.expander("Show GDP CSV preview"):
+    gdp_preview = load_gdp_from_csv()
+    st.dataframe(
+        gdp_preview.tail(20).sort_index(ascending=False),
+        use_container_width=True,
+    )
 
-st.subheader("Latest data")
+
+st.subheader("Latest model data")
 
 display_cols = [
     "stock_index",
@@ -549,13 +641,14 @@ csv = df.to_csv(index=True).encode("utf-8")
 st.download_button(
     "Download model data as CSV",
     data=csv,
-    file_name=f"{stock_ticker.replace('^', '')}_{gdp_ticker}_index_value_model.csv",
+    file_name=f"{stock_ticker.replace('^', '')}_GDP_index_value_model.csv",
     mime="text/csv",
 )
 
 
 st.caption(
-    "Data source: Yahoo Finance via yfinance. "
-    "GDPCA.I is annual GDP, so the app forward-fills the latest GDP value to stock-market dates. "
+    "Data source: S&P 500 Equal Weight from Yahoo Finance via yfinance. "
+    "GDP from local CSV file: data/GDP.csv. "
+    "GDP is forward-filled to daily stock-market dates. "
     "This is a valuation indicator, not investment advice."
 )
