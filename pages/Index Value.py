@@ -67,13 +67,52 @@ def load_market_data(ticker: str, start: dt.date, end: dt.date) -> pd.DataFrame:
 
 @st.cache_data(ttl=60 * 60 * 6)
 def load_gdp_data(series: str, start: dt.date, end: dt.date) -> pd.DataFrame:
-    gdp = web.DataReader(series, "fred", start, end)
-    if gdp.empty:
+    """
+    Load GDP data directly from FRED's public CSV endpoint.
+
+    This avoids the data-reader package that can fail on Python 3.12
+    because some versions still import distutils.
+    """
+    url = f"https://fred.stlouisfed.org/graph/fredgraph.csv?id={series}"
+
+    try:
+        gdp = pd.read_csv(url)
+    except Exception as exc:
+        raise ValueError(
+            f"Could not download GDP data from FRED for series {series}. "
+            "Check your internet connection or try again later."
+        ) from exc
+
+    if gdp.empty or series not in gdp.columns:
         raise ValueError(f"No GDP data returned from FRED for series: {series}")
 
-    gdp = gdp.rename(columns={series: "gdp"})
+    gdp = gdp.rename(columns={"observation_date": "date", series: "gdp"})
+    gdp["date"] = pd.to_datetime(gdp["date"], errors="coerce")
+    gdp["gdp"] = pd.to_numeric(gdp["gdp"], errors="coerce")
+
+    gdp = (
+        gdp.dropna(subset=["date", "gdp"])
+        .set_index("date")
+        .sort_index()
+    )
     gdp.index = pd.to_datetime(gdp.index).tz_localize(None)
-    return gdp.dropna()
+
+    # Keep only the requested date range, but include the most recent GDP
+    # value before the start date so daily market dates can be forward-filled.
+    gdp = gdp.loc[gdp.index <= pd.Timestamp(end)]
+
+    earlier_or_equal_start = gdp.loc[gdp.index <= pd.Timestamp(start)]
+    after_start = gdp.loc[gdp.index >= pd.Timestamp(start)]
+
+    if not earlier_or_equal_start.empty:
+        gdp = pd.concat([earlier_or_equal_start.tail(1), after_start]).sort_index()
+    else:
+        gdp = after_start
+
+    if gdp.empty:
+        raise ValueError(f"No GDP observations available for {series} in the selected date range.")
+
+    return gdp
 
 
 def build_model(config: ModelConfig) -> pd.DataFrame:
