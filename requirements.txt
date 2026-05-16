@@ -7,3 +7,4 @@ seaborn
 scipy
 bayesian-optimization
 plotly
+LooseVersion
