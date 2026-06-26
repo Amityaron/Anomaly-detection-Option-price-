@@ -7,248 +7,348 @@ import numpy as np
 from scipy.stats import norm
 from datetime import date
 
-st.set_page_config(page_title="Options Chain", layout="wide")
 
-st.title("Options Chain - Yahoo Style")
+st.set_page_config(page_title="Options Chain CAGR", layout="wide")
+
+st.title("📊 Options Chain - Calls | Strike | Puts")
+st.write("CAGR is calculated using LAST option price only.")
 
 
-def get_price(ticker_obj):
+# =====================================================
+# Helper functions
+# =====================================================
+def get_stock_price(ticker_obj):
     try:
-        return float(ticker_obj.fast_info["last_price"])
+        price = ticker_obj.fast_info.get("last_price")
+        if price is not None and price > 0:
+            return float(price)
     except Exception:
-        hist = ticker_obj.history(period="5d")
-        return float(hist["Close"].iloc[-1])
+        pass
+
+    hist = ticker_obj.history(period="5d")
+    if hist.empty:
+        raise ValueError("Could not get stock price.")
+
+    return float(hist["Close"].dropna().iloc[-1])
 
 
 def bs_delta(option_type, S, K, T, r, iv):
-    if iv <= 0 or T <= 0:
+    if pd.isna(iv) or iv <= 0 or S <= 0 or K <= 0 or T <= 0:
         return np.nan
 
     d1 = (np.log(S / K) + (r + 0.5 * iv**2) * T) / (iv * np.sqrt(T))
 
     if option_type == "CALL":
         return norm.cdf(d1)
-    else:
-        return norm.cdf(d1) - 1
+
+    return norm.cdf(d1) - 1
 
 
-def cagr(premium, capital, dte):
-    if premium <= 0 or capital <= 0 or dte <= 0:
+def calc_cagr_by_last_price(last_price, capital_base, dte):
+    """
+    CAGR = (1 + last_price / capital_base) ^ (365 / DTE) - 1
+    """
+    if pd.isna(last_price) or pd.isna(capital_base):
         return np.nan
 
-    return ((1 + premium / capital) ** (365 / dte) - 1) * 100
+    if last_price <= 0 or capital_base <= 0 or dte <= 0:
+        return np.nan
+
+    return ((1 + last_price / capital_base) ** (365 / dte) - 1) * 100
 
 
-def add_calculations(df, side, stock_price, dte, r):
-    df = df.copy()
-
+def prepare_calls(calls, stock_price, dte, r):
+    calls = calls.copy()
     T = dte / 365
 
-    df["Mid"] = np.where(
-        (df["bid"] > 0) & (df["ask"] > 0),
-        (df["bid"] + df["ask"]) / 2,
-        df["lastPrice"]
-    )
+    calls["Call IV %"] = calls["impliedVolatility"] * 100
 
-    df["IV %"] = df["impliedVolatility"] * 100
-
-    df["Delta"] = df.apply(
-        lambda x: bs_delta(
-            option_type=side,
+    calls["Call Delta"] = calls.apply(
+        lambda row: bs_delta(
+            option_type="CALL",
             S=stock_price,
-            K=x["strike"],
+            K=row["strike"],
             T=T,
             r=r,
-            iv=x["impliedVolatility"]
+            iv=row["impliedVolatility"]
         ),
         axis=1
     )
 
-    if side == "CALL":
-        df["ITM"] = stock_price > df["strike"]
-        capital = stock_price
-    else:
-        df["ITM"] = stock_price < df["strike"]
-        capital = df["strike"]
+    calls["Call ITM"] = stock_price > calls["strike"]
 
-    df["CAGR %"] = df.apply(
-        lambda x: cagr(
-            premium=x["Mid"],
-            capital=capital if side == "CALL" else x["strike"],
+    # Call CAGR by LAST CALL PRICE
+    # Capital base = stock price, like covered call logic
+    calls["Call CAGR %"] = calls.apply(
+        lambda row: calc_cagr_by_last_price(
+            last_price=row["lastPrice"],
+            capital_base=stock_price,
             dte=dte
         ),
         axis=1
     )
 
-    return df
+    calls = calls.rename(columns={
+        "lastPrice": "Call Last",
+        "bid": "Call Bid",
+        "ask": "Call Ask",
+        "volume": "Call Volume",
+        "openInterest": "Call OI"
+    })
+
+    keep_cols = [
+        "strike",
+        "Call Last",
+        "Call Bid",
+        "Call Ask",
+        "Call Volume",
+        "Call OI",
+        "Call IV %",
+        "Call Delta",
+        "Call CAGR %",
+        "Call ITM"
+    ]
+
+    return calls[keep_cols]
 
 
-ticker = st.text_input("Enter ticker", value="AAPL").upper()
+def prepare_puts(puts, stock_price, dte, r):
+    puts = puts.copy()
+    T = dte / 365
 
-risk_free_rate = st.number_input(
-    "Risk free rate %",
+    puts["Put IV %"] = puts["impliedVolatility"] * 100
+
+    puts["Put Delta"] = puts.apply(
+        lambda row: bs_delta(
+            option_type="PUT",
+            S=stock_price,
+            K=row["strike"],
+            T=T,
+            r=r,
+            iv=row["impliedVolatility"]
+        ),
+        axis=1
+    )
+
+    puts["Put ITM"] = stock_price < puts["strike"]
+
+    # Put CAGR by LAST PUT PRICE
+    # Capital base = strike, like cash-secured put logic
+    puts["Put CAGR %"] = puts.apply(
+        lambda row: calc_cagr_by_last_price(
+            last_price=row["lastPrice"],
+            capital_base=row["strike"],
+            dte=dte
+        ),
+        axis=1
+    )
+
+    puts = puts.rename(columns={
+        "lastPrice": "Put Last",
+        "bid": "Put Bid",
+        "ask": "Put Ask",
+        "volume": "Put Volume",
+        "openInterest": "Put OI"
+    })
+
+    keep_cols = [
+        "strike",
+        "Put Last",
+        "Put Bid",
+        "Put Ask",
+        "Put Volume",
+        "Put OI",
+        "Put IV %",
+        "Put Delta",
+        "Put CAGR %",
+        "Put ITM"
+    ]
+
+    return puts[keep_cols]
+
+
+def style_itm(row):
+    styles = [""] * len(row)
+
+    for i, col in enumerate(row.index):
+        if col.startswith("Call") and row.get("Call ITM") is True:
+            styles[i] = "background-color: #264b70; color: white;"
+
+        if col.startswith("Put") and row.get("Put ITM") is True:
+            styles[i] = "background-color: #264b70; color: white;"
+
+        if col == "Strike":
+            styles[i] = "background-color: #333333; color: white; font-weight: bold;"
+
+    return styles
+
+
+# =====================================================
+# Sidebar
+# =====================================================
+st.sidebar.header("Inputs")
+
+ticker = st.sidebar.text_input("Ticker", value="AAPL").upper().strip()
+
+risk_free_rate_pct = st.sidebar.number_input(
+    "Risk-free rate for delta %",
     value=4.5,
     step=0.1
-) / 100
+)
 
+risk_free_rate = risk_free_rate_pct / 100
+
+filter_near_money = st.sidebar.checkbox("Show only strikes near stock price", value=True)
+
+moneyness_range = st.sidebar.slider(
+    "Strike range +/- %",
+    min_value=5,
+    max_value=100,
+    value=30,
+    step=5
+)
+
+show_raw_data = st.sidebar.checkbox("Show raw calls and puts", value=False)
+
+
+# =====================================================
+# Main app
+# =====================================================
 if ticker:
-    tk = yf.Ticker(ticker)
-    expirations = list(tk.options)
+    try:
+        tk = yf.Ticker(ticker)
+        expirations = list(tk.options)
 
-    if len(expirations) == 0:
-        st.error("No options found for this ticker.")
-        st.stop()
+        if len(expirations) == 0:
+            st.error("No options found for this ticker.")
+            st.stop()
 
-    expiration = st.selectbox("Expiration date", expirations)
+        expiration = st.sidebar.selectbox("Expiration", expirations)
 
-    if st.button("Load options"):
-        stock_price = get_price(tk)
+        if st.sidebar.button("Load option chain"):
+            stock_price = get_stock_price(tk)
 
-        exp_date = pd.to_datetime(expiration).date()
-        dte = max((exp_date - date.today()).days, 1)
+            exp_date = pd.to_datetime(expiration).date()
+            dte = max((exp_date - date.today()).days, 1)
 
-        chain = tk.option_chain(expiration)
+            chain = tk.option_chain(expiration)
 
-        calls = add_calculations(
-            chain.calls,
-            side="CALL",
-            stock_price=stock_price,
-            dte=dte,
-            r=risk_free_rate
-        )
+            calls = prepare_calls(
+                calls=chain.calls,
+                stock_price=stock_price,
+                dte=dte,
+                r=risk_free_rate
+            )
 
-        puts = add_calculations(
-            chain.puts,
-            side="PUT",
-            stock_price=stock_price,
-            dte=dte,
-            r=risk_free_rate
-        )
+            puts = prepare_puts(
+                puts=chain.puts,
+                stock_price=stock_price,
+                dte=dte,
+                r=risk_free_rate
+            )
 
-        st.subheader(f"{ticker} price: {stock_price:.2f}")
-        st.write(f"Expiration: {expiration} | DTE: {dte}")
+            table = pd.merge(
+                calls,
+                puts,
+                on="strike",
+                how="outer"
+            ).sort_values("strike")
 
-        calls_small = calls[
-            [
-                "strike",
-                "lastPrice",
-                "bid",
-                "ask",
-                "volume",
-                "openInterest",
-                "IV %",
-                "Delta",
-                "CAGR %",
-                "ITM"
+            table = table.rename(columns={"strike": "Strike"})
+
+            if filter_near_money:
+                lower = stock_price * (1 - moneyness_range / 100)
+                upper = stock_price * (1 + moneyness_range / 100)
+                table = table[
+                    (table["Strike"] >= lower) &
+                    (table["Strike"] <= upper)
+                ]
+
+            # Put Strike in the middle, like Yahoo straddle view
+            cols = [
+                "Call Last",
+                "Call Bid",
+                "Call Ask",
+                "Call Volume",
+                "Call OI",
+                "Call IV %",
+                "Call Delta",
+                "Call CAGR %",
+                "Call ITM",
+
+                "Strike",
+
+                "Put Last",
+                "Put Bid",
+                "Put Ask",
+                "Put Volume",
+                "Put OI",
+                "Put IV %",
+                "Put Delta",
+                "Put CAGR %",
+                "Put ITM"
             ]
-        ].copy()
 
-        puts_small = puts[
-            [
-                "strike",
-                "lastPrice",
-                "bid",
-                "ask",
-                "volume",
-                "openInterest",
-                "IV %",
-                "Delta",
-                "CAGR %",
-                "ITM"
-            ]
-        ].copy()
+            table = table[cols]
 
-        calls_small = calls_small.rename(columns={
-            "lastPrice": "Call Last",
-            "bid": "Call Bid",
-            "ask": "Call Ask",
-            "volume": "Call Volume",
-            "openInterest": "Call OI",
-            "IV %": "Call IV %",
-            "Delta": "Call Delta",
-            "CAGR %": "Call CAGR %",
-            "ITM": "Call ITM"
-        })
+            # Round numeric columns
+            for col in table.columns:
+                if pd.api.types.is_numeric_dtype(table[col]):
+                    if "Volume" in col or "OI" in col:
+                        table[col] = table[col].fillna(0).astype(int)
+                    else:
+                        table[col] = table[col].round(2)
 
-        puts_small = puts_small.rename(columns={
-            "lastPrice": "Put Last",
-            "bid": "Put Bid",
-            "ask": "Put Ask",
-            "volume": "Put Volume",
-            "openInterest": "Put OI",
-            "IV %": "Put IV %",
-            "Delta": "Put Delta",
-            "CAGR %": "Put CAGR %",
-            "ITM": "Put ITM"
-        })
+            c1, c2, c3, c4 = st.columns(4)
+            c1.metric("Ticker", ticker)
+            c2.metric("Stock Price", f"{stock_price:,.2f}")
+            c3.metric("Expiration", expiration)
+            c4.metric("DTE", dte)
 
-        table = pd.merge(
-            calls_small,
-            puts_small,
-            on="strike",
-            how="outer"
-        ).sort_values("strike")
+            st.warning(
+                "CAGR here uses lastPrice only. LastPrice can be stale, "
+                "and for ITM options it includes intrinsic value."
+            )
 
-        table = table.rename(columns={"strike": "Strike"})
+            st.subheader("Yahoo Style Option Chain")
 
-        # Round numbers
-        for col in table.columns:
-            if table[col].dtype in ["float64", "float32"]:
-                table[col] = table[col].round(2)
+            styled_table = table.style.apply(style_itm, axis=1)
 
-        # Put strike in the middle like Yahoo
-        cols = [
-            "Call Last",
-            "Call Bid",
-            "Call Ask",
-            "Call Volume",
-            "Call OI",
-            "Call IV %",
-            "Call Delta",
-            "Call CAGR %",
-            "Call ITM",
-            "Strike",
-            "Put Last",
-            "Put Bid",
-            "Put Ask",
-            "Put Volume",
-            "Put OI",
-            "Put IV %",
-            "Put Delta",
-            "Put CAGR %",
-            "Put ITM"
-        ]
+            st.dataframe(
+                styled_table,
+                use_container_width=True,
+                height=800
+            )
 
-        table = table[cols]
+            csv = table.to_csv(index=False).encode("utf-8")
 
-        def highlight_itm(row):
-            styles = [""] * len(row)
+            st.download_button(
+                "Download CSV",
+                data=csv,
+                file_name=f"{ticker}_{expiration}_options_chain.csv",
+                mime="text/csv"
+            )
 
-            if row["Call ITM"] is True:
-                for i, col in enumerate(row.index):
-                    if col.startswith("Call"):
-                        styles[i] = "background-color: #264b70"
+            if show_raw_data:
+                st.subheader("Raw Calls")
+                st.dataframe(chain.calls, use_container_width=True)
 
-            if row["Put ITM"] is True:
-                for i, col in enumerate(row.index):
-                    if col.startswith("Put"):
-                        styles[i] = "background-color: #264b70"
+                st.subheader("Raw Puts")
+                st.dataframe(chain.puts, use_container_width=True)
 
-            return styles
+            st.markdown(
+                """
+                ### CAGR formulas used
 
-        styled_table = table.style.apply(highlight_itm, axis=1)
+                **Put CAGR by last put price**
 
-        st.dataframe(
-            styled_table,
-            use_container_width=True,
-            height=800
-        )
+                `Put CAGR = (1 + Put Last Price / Strike) ** (365 / DTE) - 1`
 
-        csv = table.to_csv(index=False).encode("utf-8")
+                **Call CAGR by last call price**
 
-        st.download_button(
-            "Download CSV",
-            data=csv,
-            file_name=f"{ticker}_{expiration}_options.csv",
-            mime="text/csv"
-        )
+                `Call CAGR = (1 + Call Last Price / Stock Price) ** (365 / DTE) - 1`
+                """
+            )
+
+    except Exception as e:
+        st.error(f"Error: {e}")
