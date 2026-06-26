@@ -352,3 +352,50 @@ if ticker:
 
     except Exception as e:
         st.error(f"Error: {e}")
+
+
+# =====================================================
+# Manual CAGR Calculator
+# =====================================================
+st.divider()
+st.subheader("🧮 Manual CAGR Calculator")
+
+st.write(
+    "Enter strike, premium and DTE. "
+    "Formula: CAGR = (1 + premium / strike) ** (365 / DTE) - 1"
+)
+
+calc_col1, calc_col2, calc_col3 = st.columns(3)
+
+manual_strike = calc_col1.number_input(
+    "Strike / Capital Base",
+    min_value=0.01,
+    value=float(round(stock_price, 2)),
+    step=0.5
+)
+
+manual_premium = calc_col2.number_input(
+    "Premium",
+    min_value=0.0,
+    value=1.00,
+    step=0.01
+)
+
+manual_dte = calc_col3.number_input(
+    "DTE",
+    min_value=1,
+    value=int(dte),
+    step=1
+)
+
+period_return = manual_premium / manual_strike
+
+manual_cagr = ((1 + period_return) ** (365 / manual_dte) - 1) * 100
+
+simple_annualized = period_return * (365 / manual_dte) * 100
+
+m1, m2, m3 = st.columns(3)
+
+m1.metric("Period Return", f"{period_return * 100:.2f}%")
+m2.metric("Simple Annualized", f"{simple_annualized:.2f}%")
+m3.metric("CAGR", f"{manual_cagr:.2f}%")
