@@ -361,41 +361,55 @@ st.divider()
 st.subheader("🧮 Manual CAGR Calculator")
 
 st.write(
-    "Enter strike, premium and DTE. "
+    "Enter the numbers manually and click Calculate. "
     "Formula: CAGR = (1 + premium / strike) ** (365 / DTE) - 1"
 )
 
-calc_col1, calc_col2, calc_col3 = st.columns(3)
+with st.form("manual_cagr_form"):
+    calc_col1, calc_col2, calc_col3 = st.columns(3)
 
-manual_strike = calc_col1.number_input(
-    "Strike / Capital Base",
-    min_value=0.01,
-    value=float(round(stock_price, 2)),
-    step=0.5
-)
+    manual_strike = calc_col1.number_input(
+        "Strike / Capital Base",
+        min_value=0.0,
+        value=None,
+        step=0.01,
+        placeholder="Example: 50"
+    )
 
-manual_premium = calc_col2.number_input(
-    "Premium",
-    min_value=0.0,
-    value=1.00,
-    step=0.01
-)
+    manual_premium = calc_col2.number_input(
+        "Premium",
+        min_value=0.0,
+        value=None,
+        step=0.01,
+        placeholder="Example: 2"
+    )
 
-manual_dte = calc_col3.number_input(
-    "DTE",
-    min_value=1,
-    value=int(dte),
-    step=1
-)
+    manual_dte = calc_col3.number_input(
+        "DTE",
+        min_value=1,
+        value=None,
+        step=1,
+        placeholder="Example: 84"
+    )
 
-period_return = manual_premium / manual_strike
+    calculate_button = st.form_submit_button("Calculate CAGR")
 
-manual_cagr = ((1 + period_return) ** (365 / manual_dte) - 1) * 100
+if calculate_button:
+    if manual_strike is None or manual_premium is None or manual_dte is None:
+        st.error("Please enter Strike, Premium and DTE.")
+    elif manual_strike <= 0:
+        st.error("Strike / Capital Base must be greater than 0.")
+    elif manual_dte <= 0:
+        st.error("DTE must be greater than 0.")
+    else:
+        period_return = manual_premium / manual_strike
 
-simple_annualized = period_return * (365 / manual_dte) * 100
+        simple_annualized = period_return * (365 / manual_dte) * 100
 
-m1, m2, m3 = st.columns(3)
+        manual_cagr = ((1 + period_return) ** (365 / manual_dte) - 1) * 100
 
-m1.metric("Period Return", f"{period_return * 100:.2f}%")
-m2.metric("Simple Annualized", f"{simple_annualized:.2f}%")
-m3.metric("CAGR", f"{manual_cagr:.2f}%")
+        m1, m2, m3 = st.columns(3)
+
+        m1.metric("Period Return", f"{period_return * 100:.2f}%")
+        m2.metric("Simple Annualized", f"{simple_annualized:.2f}%")
+        m3.metric("CAGR", f"{manual_cagr:.2f}%")
