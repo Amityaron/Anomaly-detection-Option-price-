@@ -714,13 +714,33 @@ ladder_structure = st.selectbox(
     key="ladder_structure_select"
 )
 
+last_price = st.session_state.get("option_stock_price")
+
+if last_price is None:
+    st.info("Load an option chain first so the ladder can use the current stock price.")
+    last_price = 100.0  # fallback default until option chain is loaded
+
 if ladder_structure == "10/20/30/40":
     default_allocations = [10.0, 20.0, 30.0, 40.0]
-    default_strikes = [90.0, 70.0, 60.0, 50.0]
+
+    default_strikes = [
+        round(last_price * (0.7 ** 1), 2),
+        round(last_price * (0.7 ** 2), 2),
+        round(last_price * (0.7 ** 3), 2),
+        round(last_price * (0.7 ** 4), 2),
+    ]
+
     default_premiums = [1.50, 0.42, 0.40, 0.30]
+
 else:
     default_allocations = [15.0, 30.0, 55.0]
-    default_strikes = [90.0, 70.0, 50.0]
+
+    default_strikes = [
+        round(last_price * (0.7 ** 1), 2),
+        round(last_price * (0.7 ** 2), 2),
+        round(last_price * (0.7 ** 3), 2),
+    ]
+
     default_premiums = [1.50, 0.42, 0.30]
 
 with st.form("manual_put_ladder_form"):
