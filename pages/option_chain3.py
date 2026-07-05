@@ -341,10 +341,20 @@ def summarize_ladder(ladder_df, total_capital, dte):
         weighted_simple_annualized = np.nan
         weighted_cagr = np.nan
 
-    if total_shares_if_assigned > 0:
+    # NEW LOGIC:
+    # Avg Assignment Price based only on Strike and Actual Weight %
+    valid_weights = (
+        ladder_df["Actual Weight %"].notna() &
+        (ladder_df["Actual Weight %"] > 0)
+    )
+
+    if valid_weights.any():
+        weight_sum = ladder_df.loc[valid_weights, "Actual Weight %"].sum()
+
         avg_assignment_price = (
-            ladder_df["Shares If Assigned"] * ladder_df["Net Assignment Price"]
-        ).sum() / total_shares_if_assigned
+            ladder_df.loc[valid_weights, "Strike"] *
+            ladder_df.loc[valid_weights, "Actual Weight %"]
+        ).sum() / weight_sum
     else:
         avg_assignment_price = np.nan
 
