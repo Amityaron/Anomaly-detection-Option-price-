@@ -451,7 +451,6 @@ if calculate_button:
         m2.metric("Simple Annualized", f"{simple_annualized:.2f}%")
         m3.metric("CAGR", f"{manual_cagr:.2f}%")
 
-
 # =====================================================
 # Manual Put Ladder Calculator
 # =====================================================
@@ -460,13 +459,30 @@ st.subheader("🪜 Manual Put Ladder Calculator")
 
 st.write(
     "Enter total capital, DTE, strikes and premiums. "
-    "Choose allocation structure: 10/20/30/40 or 15/30/55. "
-    "The calculator shows contracts per strike, weighted period return, CAGR, "
-    "and average assignment price."
+    "Choose allocation structure and the app will automatically show "
+    "3 legs or 4 legs."
 )
 
+# IMPORTANT:
+# This selectbox must be OUTSIDE the form,
+# so Streamlit redraws 3 or 4 legs immediately when you change it.
+ladder_structure = st.selectbox(
+    "Allocation Structure",
+    options=["10/20/30/40", "15/30/55"],
+    key="ladder_structure_select"
+)
+
+if ladder_structure == "10/20/30/40":
+    default_allocations = [10.0, 20.0, 30.0, 40.0]
+    default_strikes = [60.0, 55.0, 50.0, 45.0]
+    default_premiums = [0.60, 0.55, 0.50, 0.45]
+else:
+    default_allocations = [15.0, 30.0, 55.0]
+    default_strikes = [60.0, 50.0, 40.0]
+    default_premiums = [0.60, 0.50, 0.40]
+
 with st.form("manual_put_ladder_form"):
-    top_col1, top_col2, top_col3 = st.columns(3)
+    top_col1, top_col2 = st.columns(2)
 
     ladder_total_capital = top_col1.number_input(
         "Total Capital / Collateral",
@@ -483,20 +499,6 @@ with st.form("manual_put_ladder_form"):
         step=1,
         placeholder="Example: 30"
     )
-
-    ladder_structure = top_col3.selectbox(
-        "Allocation Structure",
-        options=["10/20/30/40", "15/30/55"]
-    )
-
-    if ladder_structure == "10/20/30/40":
-        default_allocations = [10.0, 20.0, 30.0, 40.0]
-        default_strikes = [60.0, 55.0, 50.0, 45.0]
-        default_premiums = [0.60, 0.55, 0.50, 0.45]
-    else:
-        default_allocations = [15.0, 30.0, 55.0]
-        default_strikes = [60.0, 50.0, 40.0]
-        default_premiums = [0.60, 0.50, 0.40]
 
     st.markdown("### Enter Ladder Legs")
 
@@ -519,7 +521,7 @@ with st.form("manual_put_ladder_form"):
             max_value=100.0,
             value=allocation,
             step=1.0,
-            key=f"ladder_allocation_pct_{i}"
+            key=f"{ladder_structure}_allocation_pct_{i}"
         )
 
         strike = c3.number_input(
@@ -527,7 +529,7 @@ with st.form("manual_put_ladder_form"):
             min_value=0.0,
             value=default_strikes[i],
             step=0.5,
-            key=f"ladder_strike_{i}"
+            key=f"{ladder_structure}_strike_{i}"
         )
 
         premium = c4.number_input(
@@ -535,7 +537,7 @@ with st.form("manual_put_ladder_form"):
             min_value=0.0,
             value=default_premiums[i],
             step=0.01,
-            key=f"ladder_premium_{i}"
+            key=f"{ladder_structure}_premium_{i}"
         )
 
         ladder_rows.append({
