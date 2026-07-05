@@ -437,7 +437,7 @@ ticker = st.sidebar.text_input("Ticker", value="AAPL").upper().strip()
 
 risk_free_rate_pct = st.sidebar.number_input(
     "Risk-free rate for delta %",
-    value=4.5,
+    value=4,
     step=0.1
 )
 
@@ -724,7 +724,7 @@ if ladder_structure == "10/20/30/40":
     default_allocations = [10.0, 20.0, 30.0, 40.0]
 
     default_strikes = [
-        round(last_price * (0.7 ** 1), 2),
+        round(last_price * (0.5 ** 1), 2),
         round(last_price * (0.7 ** 2), 2),
         round(last_price * (0.7 ** 3), 2),
         round(last_price * (0.7 ** 4), 2),
@@ -736,7 +736,7 @@ else:
     default_allocations = [15.0, 30.0, 55.0]
 
     default_strikes = [
-        round(last_price * (0.7 ** 1), 2),
+        round(last_price * (0.5 ** 1), 2),
         round(last_price * (0.7 ** 2), 2),
         round(last_price * (0.7 ** 3), 2),
     ]
