@@ -377,7 +377,7 @@ def display_ladder_summary(summary, title="Ladder Summary"):
     s8.metric("Avg Assignment Price", f"${summary['avg_assignment_price']:,.2f}")
 
 
-def display_ladder_details(ladder_df, title="Ladder Details"):
+def display_ladder_details(ladder_df, title="Ladder Details", download_key="ladder_csv"):
     st.markdown(f"### {title}")
 
     display_cols = [
@@ -387,6 +387,7 @@ def display_ladder_details(ladder_df, title="Ladder Details"):
         "Premium",
         "Target Capital",
         "Contracts",
+        "Extra Contracts",
         "Final Contracts",
         "Actual Collateral",
         "Actual Weight %",
@@ -414,11 +415,16 @@ def display_ladder_details(ladder_df, title="Ladder Details"):
 
     ladder_csv = ladder_display.to_csv(index=False).encode("utf-8")
 
+    # IMPORTANT:
+    # This key must be unique because this function is called twice:
+    # 1. Base Ladder Details
+    # 2. Final Ladder Details After Extra Contracts
     st.download_button(
         "Download Ladder CSV",
         data=ladder_csv,
-        file_name="put_ladder_calculator.csv",
-        mime="text/csv"
+        file_name=f"{download_key}.csv",
+        mime="text/csv",
+        key=f"download_{download_key}"
     )
 
 
@@ -837,7 +843,7 @@ if st.session_state.put_ladder_base_df is not None and st.session_state.put_ladd
     base_summary = summarize_ladder(base_ladder_df, total_capital, dte)
 
     display_ladder_summary(base_summary, title="Base Ladder Summary")
-    display_ladder_details(base_ladder_df, title="Base Ladder Details")
+    display_ladder_details(base_ladder_df, title="Base Ladder Details", download_key="base_ladder_details")
 
     st.divider()
     st.subheader("➕ Add Extra Contracts From Unused Capital")
@@ -911,7 +917,7 @@ if st.session_state.put_ladder_base_df is not None and st.session_state.put_ladd
         )
     else:
         display_ladder_summary(final_summary, title="Final Ladder Summary After Extra Contracts")
-        display_ladder_details(final_ladder_df, title="Final Ladder Details After Extra Contracts")
+        display_ladder_details(final_ladder_df, title="Final Ladder Details After Extra Contracts", download_key="final_ladder_details_after_extra_contracts")
 
     st.markdown(
         """
