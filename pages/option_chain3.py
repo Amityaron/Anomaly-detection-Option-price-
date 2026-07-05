@@ -983,6 +983,6 @@ if st.session_state.put_ladder_base_df is not None and st.session_state.put_ladd
 
         **Average Assignment Price**
 
-        `Avg Assignment Price = sum(Shares If Assigned * Net Assignment Price) / sum(Shares If Assigned)`
+        `Avg Assignment Price = sum(Strike * Actual Weight %) / sum(Actual Weight %)`
         """
     )
