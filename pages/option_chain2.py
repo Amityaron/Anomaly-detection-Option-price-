@@ -474,11 +474,11 @@ ladder_structure = st.selectbox(
 
 if ladder_structure == "10/20/30/40":
     default_allocations = [10.0, 20.0, 30.0, 40.0]
-    default_strikes = [60.0, 55.0, 50.0, 45.0]
+    default_strikes = [90.0, 70.0, 60.0, 50.0]
     default_premiums = [0.60, 0.55, 0.50, 0.45]
 else:
     default_allocations = [15.0, 30.0, 55.0]
-    default_strikes = [60.0, 50.0, 40.0]
+    default_strikes = [90.0, 70.0, 50.0]
     default_premiums = [0.60, 0.50, 0.40]
 
 with st.form("manual_put_ladder_form"):
@@ -487,7 +487,7 @@ with st.form("manual_put_ladder_form"):
     ladder_total_capital = top_col1.number_input(
         "Total Capital / Collateral",
         min_value=0.0,
-        value=100000.0,
+        value=122000.0,
         step=1000.0,
         placeholder="Example: 100000"
     )
