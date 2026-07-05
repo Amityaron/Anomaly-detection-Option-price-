@@ -450,3 +450,286 @@ if calculate_button:
         m1.metric("Period Return", f"{period_return * 100:.2f}%")
         m2.metric("Simple Annualized", f"{simple_annualized:.2f}%")
         m3.metric("CAGR", f"{manual_cagr:.2f}%")
+
+
+# =====================================================
+# Manual Put Ladder Calculator
+# =====================================================
+st.divider()
+st.subheader("🪜 Manual Put Ladder Calculator")
+
+st.write(
+    "Enter total capital, DTE, strikes and premiums. "
+    "Choose allocation structure: 10/20/30/40 or 15/30/55. "
+    "The calculator shows contracts per strike, weighted period return, CAGR, "
+    "and average assignment price."
+)
+
+with st.form("manual_put_ladder_form"):
+    top_col1, top_col2, top_col3 = st.columns(3)
+
+    ladder_total_capital = top_col1.number_input(
+        "Total Capital / Collateral",
+        min_value=0.0,
+        value=100000.0,
+        step=1000.0,
+        placeholder="Example: 100000"
+    )
+
+    ladder_dte = top_col2.number_input(
+        "DTE",
+        min_value=1,
+        value=30,
+        step=1,
+        placeholder="Example: 30"
+    )
+
+    ladder_structure = top_col3.selectbox(
+        "Allocation Structure",
+        options=["10/20/30/40", "15/30/55"]
+    )
+
+    if ladder_structure == "10/20/30/40":
+        default_allocations = [10.0, 20.0, 30.0, 40.0]
+        default_strikes = [60.0, 55.0, 50.0, 45.0]
+        default_premiums = [0.60, 0.55, 0.50, 0.45]
+    else:
+        default_allocations = [15.0, 30.0, 55.0]
+        default_strikes = [60.0, 50.0, 40.0]
+        default_premiums = [0.60, 0.50, 0.40]
+
+    st.markdown("### Enter Ladder Legs")
+
+    header_cols = st.columns([1, 1, 1, 1])
+    header_cols[0].markdown("**Leg**")
+    header_cols[1].markdown("**Allocation %**")
+    header_cols[2].markdown("**Strike**")
+    header_cols[3].markdown("**Premium**")
+
+    ladder_rows = []
+
+    for i, allocation in enumerate(default_allocations):
+        c1, c2, c3, c4 = st.columns([1, 1, 1, 1])
+
+        c1.write(f"Leg {i + 1}")
+
+        allocation_pct = c2.number_input(
+            f"Allocation % {i + 1}",
+            min_value=0.0,
+            max_value=100.0,
+            value=allocation,
+            step=1.0,
+            key=f"ladder_allocation_pct_{i}"
+        )
+
+        strike = c3.number_input(
+            f"Strike {i + 1}",
+            min_value=0.0,
+            value=default_strikes[i],
+            step=0.5,
+            key=f"ladder_strike_{i}"
+        )
+
+        premium = c4.number_input(
+            f"Premium {i + 1}",
+            min_value=0.0,
+            value=default_premiums[i],
+            step=0.01,
+            key=f"ladder_premium_{i}"
+        )
+
+        ladder_rows.append({
+            "Leg": i + 1,
+            "Allocation %": allocation_pct,
+            "Strike": strike,
+            "Premium": premium
+        })
+
+    calculate_ladder = st.form_submit_button("Calculate Put Ladder")
+
+
+if calculate_ladder:
+    ladder_df = pd.DataFrame(ladder_rows)
+
+    allocation_sum = ladder_df["Allocation %"].sum()
+
+    if ladder_total_capital <= 0:
+        st.error("Total Capital / Collateral must be greater than 0.")
+
+    elif ladder_dte <= 0:
+        st.error("DTE must be greater than 0.")
+
+    elif abs(allocation_sum - 100) > 0.01:
+        st.error(f"Allocation must sum to 100%. Current sum: {allocation_sum:.2f}%")
+
+    elif (ladder_df["Strike"] <= 0).any():
+        st.error("All strikes must be greater than 0.")
+
+    else:
+        # Allocation
+        ladder_df["Allocation Weight"] = ladder_df["Allocation %"] / 100
+        ladder_df["Target Capital"] = ladder_total_capital * ladder_df["Allocation Weight"]
+
+        # Cash-secured put collateral
+        ladder_df["Collateral Per Contract"] = ladder_df["Strike"] * 100
+
+        # Contracts per strike
+        ladder_df["Contracts"] = np.floor(
+            ladder_df["Target Capital"] / ladder_df["Collateral Per Contract"]
+        ).astype(int)
+
+        # Actual capital used after contract rounding
+        ladder_df["Actual Collateral"] = (
+            ladder_df["Contracts"] * ladder_df["Collateral Per Contract"]
+        )
+
+        ladder_df["Actual Weight %"] = np.where(
+            ladder_total_capital > 0,
+            ladder_df["Actual Collateral"] / ladder_total_capital * 100,
+            np.nan
+        )
+
+        ladder_df["Unused Capital"] = (
+            ladder_df["Target Capital"] - ladder_df["Actual Collateral"]
+        )
+
+        # Premium received
+        ladder_df["Premium Cash"] = (
+            ladder_df["Contracts"] * ladder_df["Premium"] * 100
+        )
+
+        # Return per leg
+        ladder_df["Period Return %"] = np.where(
+            ladder_df["Actual Collateral"] > 0,
+            ladder_df["Premium Cash"] / ladder_df["Actual Collateral"] * 100,
+            np.nan
+        )
+
+        ladder_df["Simple Annualized %"] = (
+            ladder_df["Period Return %"] * 365 / ladder_dte
+        )
+
+        ladder_df["CAGR %"] = np.where(
+            ladder_df["Period Return %"].notna(),
+            ((1 + ladder_df["Period Return %"] / 100) ** (365 / ladder_dte) - 1) * 100,
+            np.nan
+        )
+
+        # Assignment calculations
+        ladder_df["Net Assignment Price"] = (
+            ladder_df["Strike"] - ladder_df["Premium"]
+        )
+
+        ladder_df["Shares If Assigned"] = ladder_df["Contracts"] * 100
+
+        # Basket calculations
+        total_actual_collateral = ladder_df["Actual Collateral"].sum()
+        total_premium_cash = ladder_df["Premium Cash"].sum()
+        total_unused_capital = ladder_total_capital - total_actual_collateral
+        total_contracts = ladder_df["Contracts"].sum()
+        total_shares_if_assigned = ladder_df["Shares If Assigned"].sum()
+
+        if total_actual_collateral > 0:
+            weighted_period_return = total_premium_cash / total_actual_collateral
+            weighted_simple_annualized = weighted_period_return * 365 / ladder_dte
+            weighted_cagr = ((1 + weighted_period_return) ** (365 / ladder_dte) - 1)
+        else:
+            weighted_period_return = np.nan
+            weighted_simple_annualized = np.nan
+            weighted_cagr = np.nan
+
+        if total_shares_if_assigned > 0:
+            avg_assignment_price = (
+                ladder_df["Shares If Assigned"] * ladder_df["Net Assignment Price"]
+            ).sum() / total_shares_if_assigned
+        else:
+            avg_assignment_price = np.nan
+
+        st.markdown("### Ladder Summary")
+
+        s1, s2, s3, s4 = st.columns(4)
+        s1.metric("Total Contracts", f"{total_contracts:,}")
+        s2.metric("Total Premium", f"${total_premium_cash:,.2f}")
+        s3.metric("Used Collateral", f"${total_actual_collateral:,.2f}")
+        s4.metric("Unused Capital", f"${total_unused_capital:,.2f}")
+
+        s5, s6, s7, s8 = st.columns(4)
+        s5.metric("Weighted Period Return", f"{weighted_period_return * 100:.2f}%")
+        s6.metric("Weighted Simple Annualized", f"{weighted_simple_annualized * 100:.2f}%")
+        s7.metric("Weighted CAGR", f"{weighted_cagr * 100:.2f}%")
+        s8.metric("Avg Assignment Price", f"${avg_assignment_price:,.2f}")
+
+        st.markdown("### Ladder Details")
+
+        display_cols = [
+            "Leg",
+            "Allocation %",
+            "Strike",
+            "Premium",
+            "Target Capital",
+            "Contracts",
+            "Actual Collateral",
+            "Actual Weight %",
+            "Unused Capital",
+            "Premium Cash",
+            "Period Return %",
+            "Simple Annualized %",
+            "CAGR %",
+            "Net Assignment Price",
+            "Shares If Assigned"
+        ]
+
+        ladder_display = ladder_df[display_cols].copy()
+
+        for col in ladder_display.columns:
+            if pd.api.types.is_numeric_dtype(ladder_display[col]):
+                ladder_display[col] = ladder_display[col].round(2)
+
+        st.dataframe(
+            ladder_display,
+            use_container_width=True,
+            height=350
+        )
+
+        ladder_csv = ladder_display.to_csv(index=False).encode("utf-8")
+
+        st.download_button(
+            "Download Ladder CSV",
+            data=ladder_csv,
+            file_name="put_ladder_calculator.csv",
+            mime="text/csv"
+        )
+
+        st.markdown(
+            """
+            ### Formulas
+
+            **Contracts**
+
+            `Contracts = floor(Target Capital / (Strike * 100))`
+
+            **Premium Cash**
+
+            `Premium Cash = Contracts * Premium * 100`
+
+            **Period Return per leg**
+
+            `Period Return % = Premium Cash / Actual Collateral * 100`
+
+            **Weighted Period Return**
+
+            `Weighted Period Return = Total Premium Cash / Total Actual Collateral`
+
+            **CAGR**
+
+            `CAGR = ((1 + Period Return) ** (365 / DTE) - 1) * 100`
+
+            **Net Assignment Price**
+
+            `Net Assignment Price = Strike - Premium`
+
+            **Average Assignment Price**
+
+            `Avg Assignment Price = sum(Shares If Assigned * Net Assignment Price) / sum(Shares If Assigned)`
+            """
+        )
