@@ -437,7 +437,7 @@ ticker = st.sidebar.text_input("Ticker", value="AAPL").upper().strip()
 
 risk_free_rate_pct = st.sidebar.number_input(
     "Risk-free rate for delta %",
-    value=4,
+    value=4.0,
     step=0.1
 )
 
