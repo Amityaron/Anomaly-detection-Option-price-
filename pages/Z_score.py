@@ -22,7 +22,7 @@ st.markdown("""
 #    "ACWI", "IXN", "IAU", "SMH", "IYW", "SVIX", "CNDX.L"]
 default_etfs = [
    "UGL", "USD", "QLD", "LUMI.TA", "TA-BANKS.TA","ROM", "BTC-USD",
-    "SSO", "UWM", "URSP", "UYG", "TA35.TA", "SVIX"]
+    "SSO", "UWM", "URSP", "UYG", "TA35.TA", "SVIX","NVDA","TSM"]
 
 if 'etfs' not in st.session_state:
     st.session_state.etfs = default_etfs.copy()
