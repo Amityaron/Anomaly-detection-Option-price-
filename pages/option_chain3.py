@@ -462,7 +462,7 @@ moneyness_range = st.sidebar.slider(
     "Strike range +/- %",
     min_value=5,
     max_value=100,
-    value=30,
+    value=100,
     step=5
 )
 
